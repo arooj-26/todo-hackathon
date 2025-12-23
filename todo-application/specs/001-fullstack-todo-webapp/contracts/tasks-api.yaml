@@ -1,0 +1,443 @@
+openapi: 3.0.3
+info:
+  title: Todo Application - Tasks API
+  description: Task management CRUD operations with user-scoped access
+  version: 1.0.0
+  contact:
+    name: Todo Application Team
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.yourdomain.com
+    description: Production server
+
+tags:
+  - name: Tasks
+    description: CRUD operations for user tasks
+
+paths:
+  /api/{user_id}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/UserIdPath'
+
+    get:
+      tags:
+        - Tasks
+      summary: List user's tasks
+      description: Retrieve all tasks for the authenticated user
+      operationId: listTasks
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user's tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskResponse'
+              examples:
+                with_tasks:
+                  summary: User with multiple tasks
+                  value:
+                    - id: 1
+                      user_id: 1
+                      description: Complete project documentation
+                      completed: false
+                      created_at: '2025-12-17T10:00:00Z'
+                      updated_at: '2025-12-17T10:00:00Z'
+                    - id: 2
+                      user_id: 1
+                      description: Review pull requests
+                      completed: true
+                      created_at: '2025-12-17T09:00:00Z'
+                      updated_at: '2025-12-17T11:30:00Z'
+                empty:
+                  summary: User with no tasks
+                  value: []
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Tasks
+      summary: Create new task
+      description: Create a new task for the authenticated user
+      operationId: createTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              valid:
+                summary: Valid task creation
+                value:
+                  description: Implement user authentication
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                success:
+                  summary: Newly created task
+                  value:
+                    id: 3
+                    user_id: 1
+                    description: Implement user authentication
+                    completed: false
+                    created_at: '2025-12-17T12:00:00Z'
+                    updated_at: '2025-12-17T12:00:00Z'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                empty_description:
+                  summary: Empty description
+                  value:
+                    detail: Description cannot be empty
+                too_long:
+                  summary: Description too long
+                  value:
+                    detail: Description must be 1000 characters or less
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/{user_id}/tasks/{task_id}:
+    parameters:
+      - $ref: '#/components/parameters/UserIdPath'
+      - $ref: '#/components/parameters/TaskIdPath'
+
+    get:
+      tags:
+        - Tasks
+      summary: Get task details
+      description: Retrieve a specific task by ID (must belong to authenticated user)
+      operationId: getTask
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                success:
+                  summary: Task details
+                  value:
+                    id: 1
+                    user_id: 1
+                    description: Complete project documentation
+                    completed: false
+                    created_at: '2025-12-17T10:00:00Z'
+                    updated_at: '2025-12-17T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: Task doesn't exist
+                  value:
+                    detail: Task not found
+
+    put:
+      tags:
+        - Tasks
+      summary: Update task
+      description: Update task description (must belong to authenticated user)
+      operationId: updateTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+            examples:
+              valid:
+                summary: Valid task update
+                value:
+                  description: Complete project documentation and add examples
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                success:
+                  summary: Updated task
+                  value:
+                    id: 1
+                    user_id: 1
+                    description: Complete project documentation and add examples
+                    completed: false
+                    created_at: '2025-12-17T10:00:00Z'
+                    updated_at: '2025-12-17T12:30:00Z'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                empty_description:
+                  summary: Empty description
+                  value:
+                    detail: Description cannot be empty
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: Task doesn't exist
+                  value:
+                    detail: Task not found
+
+    delete:
+      tags:
+        - Tasks
+      summary: Delete task
+      description: Permanently delete a task (must belong to authenticated user)
+      operationId: deleteTask
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Task deleted successfully (no content)
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: Task doesn't exist
+                  value:
+                    detail: Task not found
+
+  /api/{user_id}/tasks/{task_id}/complete:
+    parameters:
+      - $ref: '#/components/parameters/UserIdPath'
+      - $ref: '#/components/parameters/TaskIdPath'
+
+    patch:
+      tags:
+        - Tasks
+      summary: Toggle task completion
+      description: Toggle task completion status between completed and incomplete
+      operationId: toggleTaskComplete
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Task completion toggled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                marked_complete:
+                  summary: Task marked as complete
+                  value:
+                    id: 1
+                    user_id: 1
+                    description: Complete project documentation
+                    completed: true
+                    created_at: '2025-12-17T10:00:00Z'
+                    updated_at: '2025-12-17T13:00:00Z'
+                marked_incomplete:
+                  summary: Task marked as incomplete
+                  value:
+                    id: 1
+                    user_id: 1
+                    description: Complete project documentation
+                    completed: false
+                    created_at: '2025-12-17T10:00:00Z'
+                    updated_at: '2025-12-17T13:15:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not_found:
+                  summary: Task doesn't exist
+                  value:
+                    detail: Task not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication endpoints
+
+  parameters:
+    UserIdPath:
+      name: user_id
+      in: path
+      required: true
+      description: User's unique identifier (must match authenticated user)
+      schema:
+        type: integer
+        minimum: 1
+      example: 1
+
+    TaskIdPath:
+      name: task_id
+      in: path
+      required: true
+      description: Task's unique identifier
+      schema:
+        type: integer
+        minimum: 1
+      example: 1
+
+  schemas:
+    CreateTaskRequest:
+      type: object
+      required:
+        - description
+      properties:
+        description:
+          type: string
+          description: Task description text
+          minLength: 1
+          maxLength: 1000
+          example: Implement user authentication
+
+    UpdateTaskRequest:
+      type: object
+      required:
+        - description
+      properties:
+        description:
+          type: string
+          description: Updated task description text
+          minLength: 1
+          maxLength: 1000
+          example: Complete project documentation and add examples
+
+    TaskResponse:
+      type: object
+      required:
+        - id
+        - user_id
+        - description
+        - completed
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          description: Task's unique identifier
+          example: 1
+        user_id:
+          type: integer
+          description: Owner user's unique identifier
+          example: 1
+        description:
+          type: string
+          description: Task description text
+          example: Complete project documentation
+        completed:
+          type: boolean
+          description: Task completion status (true = completed, false = incomplete)
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp (ISO 8601)
+          example: '2025-12-17T10:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (ISO 8601)
+          example: '2025-12-17T10:00:00Z'
+
+    Error:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+          example: Task not found
+
+  responses:
+    UnauthorizedError:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missing_token:
+              summary: No token provided
+              value:
+                detail: Not authenticated
+            invalid_token:
+              summary: Invalid or expired token
+              value:
+                detail: Could not validate credentials
+
+    ForbiddenError:
+      description: User not authorized to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            wrong_user:
+              summary: Accessing another user's resource
+              value:
+                detail: Not authorized to access this resource
+
+security:
+  - BearerAuth: []
