@@ -1,13 +1,18 @@
 /**
- * Main page for the Todo AI Chatbot
+ * Main page for the Todo AI Dashboard with ChatKit
  */
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import ChatInterface from '../components/ChatInterface';
+import Dashboard from '../components/Dashboard';
+import { getChatKitConfig } from '../lib/chatkit-config';
 
 export default function Home() {
   const [userId, setUserId] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Get ChatKit configuration
+  const chatKitConfig = getChatKitConfig();
 
   // Get or create user ID
   useEffect(() => {
@@ -25,20 +30,44 @@ export default function Home() {
     }
 
     setUserId(savedUserId);
+    setIsLoading(false);
   }, []);
 
-  if (!userId) {
+  if (isLoading) {
     return (
       <div style={{
         display: 'flex',
+        flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh'
+        height: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white'
       }}>
-        <p>Loading...</p>
+        <div style={{
+          fontSize: '3rem',
+          marginBottom: '1rem',
+          animation: 'pulse 2s infinite'
+        }}>
+          📋
+        </div>
+        <p style={{ fontSize: '1.25rem', fontWeight: 500 }}>
+          Loading Todo AI Dashboard...
+        </p>
+        {chatKitConfig.enabled && (
+          <p style={{ fontSize: '0.875rem', opacity: 0.9, marginTop: '0.5rem' }}>
+            ChatKit integration enabled
+          </p>
+        )}
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+          }
+        `}</style>
       </div>
     );
   }
 
-  return <ChatInterface userId={userId} />;
+  return <Dashboard userId={userId} />;
 }

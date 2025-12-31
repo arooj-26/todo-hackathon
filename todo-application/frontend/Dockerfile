@@ -5,11 +5,15 @@ FROM node:18-alpine AS deps
 
 WORKDIR /app
 
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (needed for build)
+# Using npm install to handle package-lock updates
+RUN npm install
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder

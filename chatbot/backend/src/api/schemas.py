@@ -16,7 +16,7 @@ class ChatRequest(BaseModel):
         conversation_id: Existing conversation to continue (null for new conversation)
         message: User's natural language message (1-5000 chars)
     """
-    conversation_id: Optional[UUID] = Field(
+    conversation_id: Optional[int] = Field(
         None,
         description="Conversation to continue (null for new)"
     )
@@ -52,7 +52,7 @@ class ChatResponse(BaseModel):
         tool_calls: List of MCP tools invoked during processing
         error: Error message if request failed (null on success)
     """
-    conversation_id: Optional[UUID] = Field(..., description="Conversation ID")
+    conversation_id: Optional[int] = Field(..., description="Conversation ID")
     response: str = Field(..., description="AI assistant response")
     tool_calls: list[ToolCall] = Field(
         default_factory=list,

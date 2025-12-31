@@ -5,7 +5,6 @@ Represents a conversation session between a user and the AI assistant.
 """
 from sqlmodel import SQLModel, Field
 from datetime import datetime
-from uuid import UUID, uuid4
 
 
 class Conversation(SQLModel, table=True):
@@ -13,14 +12,14 @@ class Conversation(SQLModel, table=True):
     Conversation model representing a chat session.
 
     Attributes:
-        id: Unique conversation identifier (UUID)
-        user_id: Owner of the conversation (UUID)
-        created_at: Session start timestamp (UTC)
-        updated_at: Last message timestamp (UTC)
+        id: Primary key, auto-incremented
+        user_id: User ID of the conversation owner
+        created_at: Timestamp of conversation creation
+        updated_at: Timestamp of last update
     """
     __tablename__ = "conversations"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(index=True, nullable=False)
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(nullable=False, index=True)  # Use integer user_id to match todo app
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface FloatingChatWidgetProps {
-  userId: string;
+  userId?: number; // User ID to associate conversation with specific user
   onTasksUpdate?: () => void; // Callback to refresh tasks when chatbot creates/updates them
 }
 
@@ -20,25 +20,37 @@ export default function FloatingChatWidget({ userId, onTasksUpdate }: FloatingCh
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load conversation ID from localStorage on mount
+  // Get user-specific localStorage key
+  const getConversationKey = () => userId ? `chatbot_conversation_id_${userId}` : 'chatbot_conversation_id';
+
+  // Load conversation ID from localStorage on mount or when userId changes
   useEffect(() => {
-    const savedConversationId = localStorage.getItem('chatbot_conversation_id');
-    if (savedConversationId) {
-      setConversationId(savedConversationId);
+    if (userId) {
+      const savedConversationId = localStorage.getItem(getConversationKey());
+      if (savedConversationId) {
+        const parsedId = parseInt(savedConversationId, 10);
+        if (!isNaN(parsedId)) {
+          setConversationId(parsedId);
+        } else {
+          setConversationId(null);
+        }
+      } else {
+        setConversationId(null);
+      }
     }
-  }, []);
+  }, [userId]);
 
   // Save conversation ID to localStorage when it changes
   useEffect(() => {
-    if (conversationId) {
-      localStorage.setItem('chatbot_conversation_id', conversationId);
+    if (userId && conversationId !== null) {
+      localStorage.setItem(getConversationKey(), conversationId.toString());
     }
-  }, [conversationId]);
+  }, [conversationId, userId]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -61,7 +73,6 @@ export default function FloatingChatWidget({ userId, onTasksUpdate }: FloatingCh
 
     try {
       const response: ChatResponse = await sendChatMessage({
-        userId,
         message: inputValue,
         conversationId,
       });
@@ -84,8 +95,17 @@ export default function FloatingChatWidget({ userId, onTasksUpdate }: FloatingCh
       setMessages(prev => [...prev, assistantMessage]);
 
       // If chatbot performed task operations, refresh the task list
-      if (response.tool_calls && response.tool_calls.length > 0 && onTasksUpdate) {
-        onTasksUpdate();
+      console.log('🤖 Chatbot response:', response);
+      console.log('🔧 Tool calls:', response.tool_calls);
+      console.log('🔄 onTasksUpdate exists?', !!onTasksUpdate);
+
+      if (response.tool_calls && response.tool_calls.length > 0) {
+        console.log('✅ Triggering task refresh...');
+        if (onTasksUpdate) {
+          onTasksUpdate();
+        }
+      } else {
+        console.log('⚠️ No tool calls found, dashboard will not refresh');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -104,7 +124,9 @@ export default function FloatingChatWidget({ userId, onTasksUpdate }: FloatingCh
   const handleNewConversation = () => {
     setConversationId(null);
     setMessages([]);
-    localStorage.removeItem('chatbot_conversation_id');
+    if (userId) {
+      localStorage.removeItem(getConversationKey());
+    }
     setError(null);
   };
 

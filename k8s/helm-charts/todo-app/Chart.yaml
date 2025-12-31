@@ -1,0 +1,15 @@
+apiVersion: v2
+name: todo-app
+description: Todo Application with AI Chatbot
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - todo
+  - chatbot
+  - ai
+  - kubernetes
+maintainers:
+  - name: Todo App Team
+sources:
+  - https://github.com/your-org/todo-app

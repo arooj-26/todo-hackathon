@@ -6,7 +6,7 @@ python-multipart>=0.0.6
 # OpenAI and AI frameworks
 openai>=1.6.0
 # Note: MCP SDK may need to be installed from specific source
-# mcp>=0.1.0
+mcp>=0.3.0
 
 # Database and ORM
 sqlmodel>=0.0.14
@@ -23,6 +23,9 @@ pytest-asyncio>=0.21.0
 httpx>=0.25.0
 pytest-mock>=3.12.0
 pytest-cov>=4.1.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
 
 # Utilities
 python-dotenv>=1.0.0

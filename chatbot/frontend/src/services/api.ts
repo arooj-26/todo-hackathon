@@ -16,7 +16,7 @@ export interface ToolCall {
 }
 
 export interface ChatResponse {
-  conversation_id: string | null;
+  conversation_id: number | null;
   response: string;
   tool_calls: ToolCall[];
   error: string | null;
@@ -25,7 +25,7 @@ export interface ChatResponse {
 export interface SendMessageParams {
   userId: string;
   message: string;
-  conversationId?: string | null;
+  conversationId?: number | null;
 }
 
 /**

@@ -1,46 +1,36 @@
 """
-Task model for todo items.
+Task model for todo items (matching todo application schema).
 
 Represents a single todo task owned by a user.
 """
-from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import Enum as SQLEnum
+from sqlmodel import SQLModel, Field
 from datetime import datetime
-from uuid import UUID, uuid4
 from typing import Optional
-
-from . import PriorityEnum
 
 
 class Task(SQLModel, table=True):
     """
-    Task model representing a todo item.
+    Task model representing a todo item (matching todo application schema).
 
     Attributes:
-        id: Unique task identifier (UUID)
-        user_id: Owner of the task (UUID)
-        title: Task title/summary (1-500 chars)
-        description: Optional detailed description (max 10,000 chars)
+        id: Primary key, auto-incremented
+        user_id: User ID of the task owner (no foreign key constraint)
+        description: Task description (1-1000 characters)
         completed: Completion status (default: False)
-        created_at: Creation timestamp (UTC)
-        updated_at: Last modification timestamp (UTC)
-        due_date: Optional due date (UTC)
-        priority: Task priority ('low', 'medium', 'high', default: 'medium')
+        priority: Priority level (low, medium, high)
+        due_date: Optional due date for the task
+        recurrence: Recurrence pattern (daily, weekly, monthly, or null)
+        created_at: Timestamp of task creation
+        updated_at: Timestamp of last update
     """
     __tablename__ = "tasks"
 
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(index=True, nullable=False)
-    title: str = Field(max_length=500, nullable=False)
-    description: Optional[str] = Field(default=None, max_length=10000)
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(nullable=False, index=True)  # Integer to match todo app backend
+    description: str = Field(nullable=False, min_length=1, max_length=1000)
     completed: bool = Field(default=False, nullable=False)
+    priority: str = Field(default="medium", nullable=False, max_length=20)
+    due_date: Optional[datetime] = Field(default=None, nullable=True)
+    recurrence: Optional[str] = Field(default=None, nullable=True, max_length=20)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    due_date: Optional[datetime] = Field(default=None)
-    priority: PriorityEnum = Field(
-        default=PriorityEnum.MEDIUM,
-        sa_column=Column(SQLEnum(PriorityEnum), nullable=False)
-    )
-
-    class Config:
-        arbitrary_types_allowed = True

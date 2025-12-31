@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  labels:
+    app.kubernetes.io/name: todo-app
+    app.kubernetes.io/instance: todo-app
+data:
+  DATABASE_HOST: "postgresql"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "todoapp"
+  TODO_API_URL: "http://todo-backend:8000"
+  CHATBOT_API_URL: "http://chatbot-backend:8001"
+  TODO_FRONTEND_PORT: "3000"
+  CHATBOT_FRONTEND_PORT: "3001"
+  ENVIRONMENT: "development"

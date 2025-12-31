@@ -1,0 +1,20 @@
+# Patterns to ignore when building packages
+.git/
+.gitignore
+.DS_Store
+
+# Documentation
+*.md
+!README.md
+
+# Environment-specific values
+values-*.yaml
+values.local.yaml
+values.dev.yaml
+values.staging.yaml
+values.prod.yaml
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, CheckSquare, CalendarDays, TrendingUp, LogOut, Plus,
-  Trash2, Calendar, Flame, Pencil, Clock, Target, Zap
+  Trash2, Calendar, Flame, Pencil, Clock, Target, Zap, Search, Filter, CalendarIcon,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,11 +13,12 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast, Toaster } from 'sonner'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { cn } from '@/lib/utils'
 import { getTasks, createTask, toggleTaskCompletion, deleteTask, updateTask } from '@/lib/api/tasks'
-import { Task, Priority } from '@/types/task'
+import { Task, Priority, Recurrence } from '@/types/task'
 import FloatingChatWidget from '@/components/chatbot/FloatingChatWidget'
 
 interface TodoFlowDashboardProps {
@@ -30,10 +32,18 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false)
   const [newTaskDescription, setNewTaskDescription] = useState('')
   const [newTaskPriority, setNewTaskPriority] = useState<Priority>('medium')
+  const [newTaskDueDate, setNewTaskDueDate] = useState<string | null>(null)
+  const [newTaskRecurrence, setNewTaskRecurrence] = useState<Recurrence>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeNav, setActiveNav] = useState('dashboard')
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false)
+
+  // New state for filtering, searching, and sorting
+  const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'overdue'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'date' | 'priority' | 'alphabetical'>('date')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     if (user) {
@@ -41,12 +51,43 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
     }
   }, [user])
 
+  // Auto-refresh tasks when tab becomes visible (to sync with chatbot)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        console.log('🔄 Tab visible - refreshing tasks')
+        loadTasks()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [user])
+
+  // Auto-refresh every 30 seconds to stay synced with chatbot
+  useEffect(() => {
+    if (!user) return
+
+    const intervalId = setInterval(() => {
+      console.log('🔄 Auto-refresh - loading tasks')
+      loadTasks()
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(intervalId)
+  }, [user])
+
   const loadTasks = async () => {
     try {
+      console.log('🔄 Loading tasks for user:', user.id)
       setIsLoading(true)
       const data = await getTasks(user.id)
+      console.log('📊 Tasks loaded:', data)
       setTasks(data)
+      console.log('✅ Tasks state updated')
     } catch (error: any) {
+      console.error('❌ Failed to load tasks:', error)
       toast.error('Failed to load tasks')
     } finally {
       setIsLoading(false)
@@ -84,11 +125,15 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
       const newTask = await createTask(user.id, {
         description: newTaskDescription.trim(),
         priority: newTaskPriority,
+        due_date: newTaskDueDate,
+        recurrence: newTaskRecurrence,
       })
       setTasks((prev) => [newTask, ...prev])
       setIsAddTaskOpen(false)
       setNewTaskDescription('')
       setNewTaskPriority('medium')
+      setNewTaskDueDate(null)
+      setNewTaskRecurrence(null)
       toast.success('✨ Task created!')
     } catch (error) {
       toast.error('Failed to create task')
@@ -105,12 +150,16 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
       const updatedTask = await updateTask(user.id, editingTask.id, {
         description: newTaskDescription.trim(),
         priority: newTaskPriority,
+        due_date: newTaskDueDate,
+        recurrence: newTaskRecurrence,
       })
       setTasks((prev) => prev.map((task) => (task.id === editingTask.id ? updatedTask : task)))
       setIsEditTaskOpen(false)
       setEditingTask(null)
       setNewTaskDescription('')
       setNewTaskPriority('medium')
+      setNewTaskDueDate(null)
+      setNewTaskRecurrence(null)
       toast.success('✏️ Task updated!')
     } catch (error) {
       toast.error('Failed to update task')
@@ -123,8 +172,59 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
     setEditingTask(task)
     setNewTaskDescription(task.description)
     setNewTaskPriority(task.priority)
+    setNewTaskDueDate(task.due_date || null)
+    setNewTaskRecurrence(task.recurrence)
     setIsEditTaskOpen(true)
   }
+
+  // Filter and sort tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    let result = [...tasks]
+
+    // Apply search filter
+    if (searchQuery) {
+      result = result.filter(task =>
+        task.description.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    // Apply status filter
+    if (filter === 'pending') {
+      result = result.filter(task => !task.completed)
+    } else if (filter === 'completed') {
+      result = result.filter(task => task.completed)
+    } else if (filter === 'overdue') {
+      result = result.filter(task =>
+        !task.completed &&
+        task.due_date &&
+        new Date(task.due_date) < new Date()
+      )
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      let comparison = 0;
+
+      if (sortBy === 'date') {
+        // Sort by due date, with null dates at the end
+        if (a.due_date && !b.due_date) return -1;
+        if (!a.due_date && b.due_date) return 1;
+        if (!a.due_date && !b.due_date) return 0;
+        comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      } else if (sortBy === 'priority') {
+        // Sort by priority (high > medium > low)
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        comparison = priorityOrder[b.priority] - priorityOrder[a.priority];
+      } else if (sortBy === 'alphabetical') {
+        // Sort alphabetically by description
+        comparison = a.description.localeCompare(b.description);
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [tasks, filter, searchQuery, sortBy, sortOrder]);
 
   const totalTasks = tasks.length
   const completedTasks = tasks.filter((t) => t.completed).length
@@ -133,6 +233,11 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
   const highPriority = tasks.filter((t) => t.priority === 'high' && !t.completed).length
   const mediumPriority = tasks.filter((t) => t.priority === 'medium' && !t.completed).length
   const lowPriority = tasks.filter((t) => t.priority === 'low' && !t.completed).length
+  const overdueTasks = tasks.filter((t) =>
+    !t.completed &&
+    t.due_date &&
+    new Date(t.due_date) < new Date()
+  ).length
 
   const chartData = [
     { name: 'Completed', value: completedTasks, color: '#10b981' },
@@ -221,7 +326,7 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
           </div>
 
           {/* Stats Grid - 4 Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-blue-100/50">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -279,6 +384,21 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
               <CardContent>
                 <div className="text-4xl font-bold text-red-700">{highPriority}</div>
                 <p className="text-xs text-red-600 mt-1">Urgent tasks</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-red-50 to-red-100/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold text-red-900">Overdue</CardTitle>
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
+                    <Calendar className="h-6 w-6 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold text-red-700">{overdueTasks}</div>
+                <p className="text-xs text-red-600 mt-1">Tasks past due</p>
               </CardContent>
             </Card>
           </div>
@@ -352,12 +472,77 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
           {/* Task List */}
           <Card className="border-0 shadow-2xl bg-white/95">
             <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <CardTitle className="text-xl">Your Tasks</CardTitle>
-                <Button onClick={() => setIsAddTaskOpen(true)} className="bg-gradient-to-r from-purple-600 to-pink-600">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Task
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search tasks..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button onClick={() => setIsAddTaskOpen(true)} className="bg-gradient-to-r from-purple-600 to-pink-600">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Task
+                  </Button>
+                </div>
+              </div>
+
+              {/* Filter and Sort Controls */}
+              <div className="flex flex-wrap gap-3 mt-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-600">Filter:</span>
+                  <select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value as any)}
+                    className="h-8 rounded-md border px-2 text-sm"
+                  >
+                    <option value="all">All</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-gray-600">Sort by:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="h-8 rounded-md border px-2 text-sm"
+                  >
+                    <option value="date">Due Date</option>
+                    <option value="priority">Priority</option>
+                    <option value="alphabetical">Alphabetical</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Order:</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="h-8"
+                  >
+                    {sortOrder === 'asc' ? (
+                      <>
+                        <ArrowUp className="w-4 h-4 mr-1" />
+                        Asc
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDown className="w-4 h-4 mr-1" />
+                        Desc
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-6">
@@ -365,11 +550,15 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
                 <div className="flex justify-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
                 </div>
-              ) : tasks.length === 0 ? (
+              ) : filteredAndSortedTasks.length === 0 ? (
                 <div className="text-center py-12">
                   <CheckSquare className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">No tasks yet</h3>
-                  <p className="text-gray-600 mb-4">Create your first task!</p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No tasks found</h3>
+                  <p className="text-gray-600 mb-4">
+                    {searchQuery || filter !== 'all'
+                      ? 'Try changing your search or filter criteria'
+                      : 'Create your first task!'}
+                  </p>
                   <Button onClick={() => setIsAddTaskOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Create Task
@@ -377,7 +566,7 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {tasks.map((task) => (
+                  {filteredAndSortedTasks.map((task) => (
                     <div
                       key={task.id}
                       className={cn(
@@ -396,9 +585,26 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
                         <p className={cn("font-semibold", task.completed ? "line-through text-gray-400" : "text-gray-900")}>
                           {task.description}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(task.created_at).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center gap-4 mt-1">
+                          {task.due_date && (
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <CalendarIcon className="w-3 h-3" />
+                              <span>
+                                {new Date(task.due_date).toLocaleDateString()}
+                                {new Date(task.due_date) < new Date() && !task.completed && (
+                                  <span className="ml-1 text-red-500">(Overdue)</span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                          {task.recurrence && (
+                            <div className="text-xs text-gray-500">
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                                {task.recurrence}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <Badge className={cn(
                         task.priority === 'high' && "bg-red-500",
@@ -450,6 +656,28 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
                 <option value="high">High</option>
               </select>
             </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={newTaskDueDate || ''}
+                onChange={(e) => setNewTaskDueDate(e.target.value || null)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Recurrence (Optional)</label>
+              <select
+                value={newTaskRecurrence || ''}
+                onChange={(e) => setNewTaskRecurrence(e.target.value as Recurrence || null)}
+                className="w-full h-10 rounded-md border px-3"
+              >
+                <option value="">No recurrence</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddTaskOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
@@ -486,6 +714,28 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
                 <option value="high">High</option>
               </select>
             </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={newTaskDueDate || ''}
+                onChange={(e) => setNewTaskDueDate(e.target.value || null)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Recurrence (Optional)</label>
+              <select
+                value={newTaskRecurrence || ''}
+                onChange={(e) => setNewTaskRecurrence(e.target.value as Recurrence || null)}
+                className="w-full h-10 rounded-md border px-3"
+              >
+                <option value="">No recurrence</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditTaskOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
@@ -497,7 +747,7 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
       </Dialog>
 
       {/* Chatbot - Fixed on right */}
-      <FloatingChatWidget userId={user.id} onTasksUpdate={loadTasks} />
+      <FloatingChatWidget userId={user?.id} onTasksUpdate={loadTasks} />
     </div>
   )
 }

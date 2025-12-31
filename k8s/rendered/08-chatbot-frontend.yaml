@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbot-frontend
+  labels:
+    app.kubernetes.io/name: todo-app
+    app: chatbot-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: chatbot-frontend
+  template:
+    metadata:
+      labels:
+        app: chatbot-frontend
+        app.kubernetes.io/name: todo-app
+    spec:
+      containers:
+        - name: chatbot-frontend
+          image: "chatbot-frontend:v1"
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 3001
+              protocol: TCP
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: CHATBOT_API_URL
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatbot-frontend
+  labels:
+    app.kubernetes.io/name: todo-app
+    app: chatbot-frontend
+spec:
+  type: NodePort
+  ports:
+    - port: 3001
+      targetPort: 3001
+      protocol: TCP
+      name: http
+      nodePort: 30001
+  selector:
+    app: chatbot-frontend

@@ -1,6 +1,6 @@
 # AI-Powered Todo Chatbot
 
-A conversational AI assistant for managing todo tasks through natural language. Built with FastAPI, OpenAI GPT-4, Next.js, and PostgreSQL.
+A conversational AI assistant for managing todo tasks through natural language. Built with FastAPI, OpenAI API, Next.js, and PostgreSQL using the Model Context Protocol (MCP) architecture.
 
 ## Features
 
@@ -9,7 +9,7 @@ A conversational AI assistant for managing todo tasks through natural language. 
 - List tasks: "Show me what I need to do"
 - Complete tasks: "Mark the meeting as done"
 - Delete tasks: "Remove the grocery task"
-- Update tasks: "Change priority to high"
+- Update tasks: "Change task to 'Call mom tonight'"
 
 ✅ **Intelligent Conversation**
 - Context-aware responses
@@ -35,8 +35,8 @@ A conversational AI assistant for managing todo tasks through natural language. 
 
 **Backend:**
 - FastAPI (Python 3.11+)
-- OpenAI GPT-4o for natural language understanding
-- Model Context Protocol (MCP) for tool abstraction
+- OpenAI API with function calling for natural language understanding
+- Model Context Protocol (MCP) SDK for tool abstraction
 - PostgreSQL (Neon) for data persistence
 - SQLModel for type-safe database operations
 - Pydantic for request/response validation
@@ -44,6 +44,7 @@ A conversational AI assistant for managing todo tasks through natural language. 
 **Frontend:**
 - Next.js 14 with TypeScript
 - React 18 for UI components
+- OpenAI ChatKit-like interface
 - Server-side rendering support
 - Responsive design
 
@@ -68,7 +69,7 @@ A conversational AI assistant for managing todo tasks through natural language. 
 │  └────────────┬────────────────┘   │
 │               │                     │
 │  ┌────────────↓─────────────┐      │
-│  │   OpenAI Agent (GPT-4o)  │      │
+│  │   OpenAI Agent API       │      │
 │  │   - Natural language     │      │
 │  │   - Function calling     │      │
 │  └────────────┬─────────────┘      │
@@ -148,12 +149,14 @@ A conversational AI assistant for managing todo tasks through natural language. 
 
 6. **Run backend**
    ```bash
-   uvicorn src.api.main:app --reload --port 8000
+   uvicorn src.api.main:app --reload --port 8001
    ```
 
-   Backend will be available at `http://localhost:8000`
-   - API Docs: `http://localhost:8000/docs`
-   - Health Check: `http://localhost:8000/health`
+   Backend will be available at `http://localhost:8001`
+   - API Docs: `http://localhost:8001/docs`
+   - Health Check: `http://localhost:8001/health`
+
+**Note**: If you have other applications running on port 8000 (such as the original Todo API), use port 8001 or another available port to avoid conflicts.
 
 ### Frontend Setup
 
@@ -287,45 +290,39 @@ The system exposes 5 MCP tools that the AI agent can use:
 Create a new todo task
 
 **Parameters:**
-- `user_id` (UUID, required)
+- `user_id` (string, required)
 - `title` (string, required, 1-500 chars)
 - `description` (string, optional)
-- `due_date` (ISO 8601, optional)
-- `priority` (low/medium/high, default: medium)
 
 ### 2. list_tasks
-List tasks with filters and sorting
+List tasks with filters
 
 **Parameters:**
-- `user_id` (UUID, required)
+- `user_id` (string, required)
 - `status` (all/pending/completed, default: all)
-- `priority` (low/medium/high, optional)
-- `sort_by` (created_at/due_date/priority, default: created_at)
 
 ### 3. complete_task
 Mark a task as complete (idempotent)
 
 **Parameters:**
-- `user_id` (UUID, required)
-- `task_id` (UUID, required)
+- `user_id` (string, required)
+- `task_id` (integer, required)
 
 ### 4. delete_task
 Permanently delete a task
 
 **Parameters:**
-- `user_id` (UUID, required)
-- `task_id` (UUID, required)
+- `user_id` (string, required)
+- `task_id` (integer, required)
 
 ### 5. update_task
 Update task properties (partial updates supported)
 
 **Parameters:**
-- `user_id` (UUID, required)
-- `task_id` (UUID, required)
+- `user_id` (string, required)
+- `task_id` (integer, required)
 - `title` (string, optional)
 - `description` (string, optional)
-- `priority` (low/medium/high, optional)
-- `due_date` (ISO 8601, optional)
 
 ## Project Structure
 
@@ -336,7 +333,9 @@ chatbot/
 │   │   ├── agent/          # OpenAI agent logic
 │   │   ├── api/            # FastAPI application
 │   │   ├── database/       # Database connection
-│   │   ├── mcp/            # MCP tools and server
+│   │   ├── mcp/            # MCP SDK server and tools
+│   │   │   ├── server.py   # MCP server with official SDK
+│   │   │   └── tools/      # Individual MCP tool implementations
 │   │   └── models/         # SQLModel database models
 │   ├── tests/
 │   │   ├── contract/       # Tool interface tests
@@ -349,6 +348,7 @@ chatbot/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/     # React components
+│   │   │   └── ChatInterface.tsx  # OpenAI ChatKit-like interface
 │   │   ├── pages/          # Next.js pages
 │   │   └── services/       # API client
 │   ├── __tests__/         # Frontend tests

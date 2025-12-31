@@ -3,6 +3,7 @@
  */
 
 export type Priority = 'low' | 'medium' | 'high'
+export type Recurrence = 'daily' | 'weekly' | 'monthly' | null
 
 export interface Task {
   id: number
@@ -10,6 +11,8 @@ export interface Task {
   description: string
   completed: boolean
   priority: Priority
+  due_date?: string | null
+  recurrence: Recurrence
   created_at: string
   updated_at: string
 }
@@ -17,10 +20,14 @@ export interface Task {
 export interface TaskCreate {
   description: string
   priority?: Priority
+  due_date?: string | null
+  recurrence?: Recurrence
 }
 
 export interface TaskUpdate {
   description?: string
   completed?: boolean
   priority?: Priority
+  due_date?: string | null
+  recurrence?: Recurrence
 }

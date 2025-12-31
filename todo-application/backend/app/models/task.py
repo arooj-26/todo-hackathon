@@ -1,6 +1,7 @@
 """Task model."""
 from datetime import datetime
 from sqlmodel import SQLModel, Field
+from typing import Optional
 
 
 class Task(SQLModel, table=True):
@@ -13,6 +14,8 @@ class Task(SQLModel, table=True):
         description: Task description (1-1000 characters)
         completed: Completion status (default: False)
         priority: Priority level (low, medium, high)
+        due_date: Optional due date for the task
+        recurrence: Recurrence pattern (daily, weekly, monthly, or null)
         created_at: Timestamp of task creation
         updated_at: Timestamp of last update
     """
@@ -24,5 +27,7 @@ class Task(SQLModel, table=True):
     description: str = Field(nullable=False, min_length=1, max_length=1000)
     completed: bool = Field(default=False, nullable=False)
     priority: str = Field(default="medium", nullable=False, max_length=20)
+    due_date: Optional[datetime] = Field(default=None, nullable=True)
+    recurrence: Optional[str] = Field(default=None, nullable=True, max_length=20)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

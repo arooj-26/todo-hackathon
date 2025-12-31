@@ -1,6 +1,6 @@
 # Todo Chatbot Backend
 
-AI-powered conversational interface for managing todos through natural language using FastAPI, OpenAI Agents SDK, and MCP (Model Context Protocol) server architecture.
+AI-powered conversational interface for managing todos through natural language using FastAPI, OpenAI API with function calling, and MCP (Model Context Protocol) SDK server architecture.
 
 ## Prerequisites
 
@@ -58,13 +58,15 @@ psql $DATABASE_URL < migrations/001_initial_schema.sql
 ### 5. Run Development Server
 
 ```bash
-uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 
-Server will be available at `http://localhost:8000`
+Server will be available at `http://localhost:8001`
 
-API documentation: `http://localhost:8000/docs`
+API documentation: `http://localhost:8001/docs`
+
+**Note**: If you have other applications running on port 8000 (such as the original Todo API), use port 8001 or another available port to avoid conflicts.
 
 ## Testing
 
@@ -95,10 +97,12 @@ pytest -m e2e
 ```
 backend/
 ├── src/
-│   ├── models/          # SQLModel database models
-│   ├── mcp/             # MCP server and tools
+│   ├── models/          # SQLModel database models (with integer IDs)
+│   ├── mcp/             # MCP SDK server and tools
+│   │   ├── server.py    # MCP server using official SDK
+│   │   └── tools/       # Individual MCP tool implementations
 │   ├── api/             # FastAPI application
-│   ├── agent/           # OpenAI Agents SDK integration
+│   ├── agent/           # OpenAI API agent with function calling
 │   └── database/        # Database configuration
 ├── tests/
 │   ├── contract/        # MCP tool contract tests
@@ -113,10 +117,10 @@ backend/
 ## Architecture
 
 - **Stateless**: All conversation context retrieved from database on each request
-- **MCP Tools**: Task operations (add, list, complete, delete, update) as standardized tools
-- **OpenAI Agent**: Interprets natural language and orchestrates tool calls
+- **MCP Tools**: Task operations (add, list, complete, delete, update) as standardized tools using official MCP SDK
+- **OpenAI Agent**: Interprets natural language and orchestrates tool calls via function calling
 - **FastAPI**: Single POST /api/{user_id}/chat endpoint
-- **SQLModel + PostgreSQL**: Type-safe ORM with Neon serverless database
+- **SQLModel + PostgreSQL**: Type-safe ORM with integer primary keys and Neon serverless database
 
 ## Development Workflow
 

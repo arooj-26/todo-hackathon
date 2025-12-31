@@ -1,0 +1,122 @@
+# Global configuration
+global:
+  environment: development
+
+# Docker images configuration
+images:
+  todoFrontend:
+    repository: todo-frontend
+    tag: v1
+    pullPolicy: Never
+  todoBackend:
+    repository: todo-backend
+    tag: v1
+    pullPolicy: Never
+  chatbotFrontend:
+    repository: chatbot-frontend
+    tag: v1
+    pullPolicy: Never
+  chatbotBackend:
+    repository: chatbot-backend
+    tag: v1
+    pullPolicy: Never
+  postgres:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+
+# Replica counts
+replicas:
+  todoFrontend: 2
+  todoBackend: 1
+  chatbotFrontend: 2
+  chatbotBackend: 1
+  postgres: 1
+
+# Service configuration
+services:
+  todoFrontend:
+    type: NodePort
+    port: 3000
+    targetPort: 3000
+    nodePort: 30000
+  todoBackend:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  chatbotFrontend:
+    type: NodePort
+    port: 3001
+    targetPort: 3001
+    nodePort: 30001
+  chatbotBackend:
+    type: ClusterIP
+    port: 8001
+    targetPort: 8001
+  postgres:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+
+# Resource limits and requests
+resources:
+  todoFrontend:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  todoBackend:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  chatbotFrontend:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  chatbotBackend:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  postgres:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1024Mi
+
+# Application configuration (non-sensitive)
+config:
+  databaseHost: postgresql
+  databasePort: "5432"
+  databaseName: todoapp
+  todoApiUrl: http://todo-backend:8000
+  chatbotApiUrl: http://chatbot-backend:8001
+  todoFrontendPort: "3000"
+  chatbotFrontendPort: "3001"
+  environment: development
+
+# Secrets (sensitive data - replace with actual values before deployment)
+# IMPORTANT: Never commit actual secrets to Git
+secrets:
+  postgresPassword: "REPLACE_WITH_YOUR_POSTGRES_PASSWORD"
+  secretKey: "REPLACE_WITH_YOUR_JWT_SECRET_KEY_AT_LEAST_32_CHARS"
+  openaiApiKey: "REPLACE_WITH_YOUR_OPENAI_API_KEY"
+
+# Storage configuration
+storage:
+  postgres:
+    size: 5Gi
+    storageClass: standard
+    accessMode: ReadWriteOnce

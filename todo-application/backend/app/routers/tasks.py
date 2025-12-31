@@ -106,7 +106,8 @@ async def create_task(
     new_task = Task(
         user_id=user_id,
         description=task_data.description,
-        completed=False
+        completed=False,
+        priority=task_data.priority if task_data.priority is not None else "medium"  # Use provided priority or default to 'medium'
     )
 
     session.add(new_task)
@@ -230,6 +231,12 @@ async def update_task(
         task.description = task_data.description
     if task_data.completed is not None:
         task.completed = task_data.completed
+    if task_data.priority is not None:
+        task.priority = task_data.priority
+    if task_data.due_date is not None:
+        task.due_date = task_data.due_date
+    if task_data.recurrence is not None:
+        task.recurrence = task_data.recurrence
 
     task.updated_at = datetime.utcnow()
 
