@@ -19,10 +19,10 @@
 
 **Purpose**: Project initialization and prerequisite verification
 
-- [ ] T001 Verify all prerequisites installed (Docker 4.53+, Minikube 1.32+, kubectl 1.28+, Helm 3.13+)
-- [ ] T002 Create Kubernetes manifests directory structure at `k8s/helm-charts/todo-app/`
-- [ ] T003 Create Helm chart subdirectories: `k8s/helm-charts/todo-app/templates/` and `k8s/helm-charts/todo-app/charts/`
-- [ ] T004 Update root `.gitignore` to exclude `k8s/helm-charts/todo-app/values-*.yaml` (environment-specific values)
+- [x] T001 Verify all prerequisites installed (Docker 4.53+, Minikube 1.32+, kubectl 1.28+, Helm 3.13+)
+- [x] T002 Create Kubernetes manifests directory structure at `k8s/helm-charts/todo-app/`
+- [x] T003 Create Helm chart subdirectories: `k8s/helm-charts/todo-app/templates/` and `k8s/helm-charts/todo-app/charts/`
+- [x] T004 Update root `.gitignore` to exclude `k8s/helm-charts/todo-app/values-*.yaml` (environment-specific values)
 
 ---
 
@@ -30,13 +30,12 @@
 
 **Purpose**: Start Minikube cluster - MUST be complete before ANY deployment tasks
 
-**⚠️ CRITICAL**: No deployme
-nt work can begin until Minikube is running
+**⚠️ CRITICAL**: No deployment work can begin until Minikube is running
 
-- [ ] T005 Start Minikube cluster with `minikube start --cpus=4 --memory=8192 --driver=docker`
-- [ ] T006 Enable Minikube addons: `minikube addons enable metrics-server`
-- [ ] T007 Verify Minikube status with `minikube status` (should show Running)
-- [ ] T008 Point Docker to Minikube's daemon with `eval $(minikube docker-env)` (required for local image builds)
+- [x] T005 Start Minikube cluster with `minikube start --cpus=4 --memory=8192 --driver=docker`
+- [x] T006 Enable Minikube addons: `minikube addons enable metrics-server`
+- [x] T007 Verify Minikube status with `minikube status` (should show Running)
+- [x] T008 Point Docker to Minikube's daemon with `eval $(minikube docker-env)` (required for local image builds)
 
 **Checkpoint**: Minikube cluster ready - containerization and deployment can now begin
 
@@ -50,43 +49,43 @@ nt work can begin until Minikube is running
 
 ### Todo Application Backend Dockerfile
 
-- [ ] T009 [P] [US2] Create `.dockerignore` in `todo-application/backend/` excluding `node_modules`, `.git`, `.env`, `__pycache__`, `*.pyc`, `.pytest_cache`, `venv/`
-- [ ] T010 [US2] Create `Dockerfile` in `todo-application/backend/` with multi-stage build:
+- [x] T009 [P] [US2] Create `.dockerignore` in `todo-application/backend/` excluding `node_modules`, `.git`, `.env`, `__pycache__`, `*.pyc`, `.pytest_cache`, `venv/`
+- [x] T010 [US2] Create `Dockerfile` in `todo-application/backend/` with multi-stage build:
   - Builder stage: FROM `python:3.11-slim`, WORKDIR `/app`, COPY `requirements.txt`, RUN `pip install --no-cache-dir --user`
   - Runtime stage: FROM `python:3.11-slim`, COPY from builder, create non-root user `python`, USER `python`, EXPOSE `8000`, CMD `uvicorn app.main:app --host 0.0.0.0 --port 8000`
-- [ ] T011 [US2] Build and test Todo backend image: `docker build -t todo-backend:v1 todo-application/backend/` and verify starts with `docker run --rm -p 8000:8000 todo-backend:v1`
-- [ ] T012 [US2] Verify Todo backend image size is under 500MB with `docker images todo-backend:v1`
+- [x] T011 [US2] Build and test Todo backend image: `docker build -t todo-backend:v1 todo-application/backend/` and verify starts with `docker run --rm -p 8000:8000 todo-backend:v1`
+- [x] T012 [US2] Verify Todo backend image size is under 500MB with `docker images todo-backend:v1`
 
 ### Todo Application Frontend Dockerfile
 
-- [ ] T013 [P] [US2] Create `.dockerignore` in `todo-application/frontend/` excluding `node_modules`, `.next`, `.git`, `.env*`, `*.log`, `.DS_Store`
-- [ ] T014 [US2] Create `Dockerfile` in `todo-application/frontend/` with multi-stage build:
+- [x] T013 [P] [US2] Create `.dockerignore` in `todo-application/frontend/` excluding `node_modules`, `.next`, `.git`, `.env*`, `*.log`, `.DS_Store`
+- [x] T014 [US2] Create `Dockerfile` in `todo-application/frontend/` with multi-stage build:
   - Builder stage: FROM `node:18-alpine`, WORKDIR `/app`, COPY `package*.json`, RUN `npm ci`, COPY `src/ tsconfig.json next.config.js`, RUN `npm run build`
   - Runtime stage: FROM `node:18-alpine`, COPY from builder `.next/ public/ package.json`, RUN `npm install --production --ignore-scripts`, create non-root user `node`, USER `node`, EXPOSE `3000`, CMD `npm start`
-- [ ] T015 [US2] Build and test Todo frontend image: `docker build -t todo-frontend:v1 todo-application/frontend/` and verify starts with `docker run --rm -p 3000:3000 todo-frontend:v1`
-- [ ] T016 [US2] Verify Todo frontend image size is under 500MB with `docker images todo-frontend:v1`
+- [x] T015 [US2] Build and test Todo frontend image: `docker build -t todo-frontend:v1 todo-application/frontend/` and verify starts with `docker run --rm -p 3000:3000 todo-frontend:v1`
+- [x] T016 [US2] Verify Todo frontend image size is under 500MB with `docker images todo-frontend:v1`
 
 ### Chatbot Backend Dockerfile
 
-- [ ] T017 [P] [US2] Create `.dockerignore` in `chatbot/backend/` excluding `node_modules`, `.git`, `.env`, `__pycache__`, `*.pyc`, `.pytest_cache`, `venv/`
-- [ ] T018 [US2] Create `Dockerfile` in `chatbot/backend/` with multi-stage build:
+- [x] T017 [P] [US2] Create `.dockerignore` in `chatbot/backend/` excluding `node_modules`, `.git`, `.env`, `__pycache__`, `*.pyc`, `.pytest_cache`, `venv/`
+- [x] T018 [US2] Create `Dockerfile` in `chatbot/backend/` with multi-stage build:
   - Builder stage: FROM `python:3.11-slim`, WORKDIR `/app`, COPY `requirements.txt`, RUN `pip install --no-cache-dir --user`
   - Runtime stage: FROM `python:3.11-slim`, COPY from builder, COPY `src/`, create non-root user `python`, USER `python`, EXPOSE `8001`, CMD `uvicorn src.api.main:app --host 0.0.0.0 --port 8001`
-- [ ] T019 [US2] Build and test Chatbot backend image: `docker build -t chatbot-backend:v1 chatbot/backend/` and verify starts with `docker run --rm -p 8001:8001 chatbot-backend:v1`
-- [ ] T020 [US2] Verify Chatbot backend image size is under 500MB with `docker images chatbot-backend:v1`
+- [x] T019 [US2] Build and test Chatbot backend image: `docker build -t chatbot-backend:v1 chatbot/backend/` and verify starts with `docker run --rm -p 8001:8001 chatbot-backend:v1`
+- [x] T020 [US2] Verify Chatbot backend image size is under 500MB with `docker images chatbot-backend:v1`
 
 ### Chatbot Frontend Dockerfile
 
-- [ ] T021 [P] [US2] Create `.dockerignore` in `chatbot/frontend/` excluding `node_modules`, `.next`, `.git`, `.env*`, `*.log`, `.DS_Store`
-- [ ] T022 [US2] Create `Dockerfile` in `chatbot/frontend/` with multi-stage build:
+- [x] T021 [P] [US2] Create `.dockerignore` in `chatbot/frontend/` excluding `node_modules`, `.next`, `.git`, `.env*`, `*.log`, `.DS_Store`
+- [x] T022 [US2] Create `Dockerfile` in `chatbot/frontend/` with multi-stage build:
   - Builder stage: FROM `node:18-alpine`, WORKDIR `/app`, COPY `package*.json`, RUN `npm ci`, COPY `src/ tsconfig.json next.config.js`, RUN `npm run build`
   - Runtime stage: FROM `node:18-alpine`, COPY from builder `.next/ public/ package.json`, RUN `npm install --production --ignore-scripts`, create non-root user `node`, USER `node`, EXPOSE `3001`, CMD `npm start`
-- [ ] T023 [US2] Build and test Chatbot frontend image: `docker build -t chatbot-frontend:v1 chatbot/frontend/` and verify starts with `docker run --rm -p 3001:3001 chatbot-frontend:v1`
-- [ ] T024 [US2] Verify Chatbot frontend image size is under 500MB with `docker images chatbot-frontend:v1`
+- [x] T023 [US2] Build and test Chatbot frontend image: `docker build -t chatbot-frontend:v1 chatbot/frontend/` and verify starts with `docker run --rm -p 3001:3001 chatbot-frontend:v1`
+- [x] T024 [US2] Verify Chatbot frontend image size is under 500MB with `docker images chatbot-frontend:v1`
 
 ### Image Verification
 
-- [ ] T025 [US2] Verify all 4 images are available in Minikube with `docker images | grep -E "todo|chatbot"`
+- [x] T025 [US2] Verify all 4 images are available in Minikube with `docker images | grep -E "todo|chatbot"`
 - [ ] T026 [US2] Run Docker security scan on all images: `docker scan todo-backend:v1 todo-frontend:v1 chatbot-backend:v1 chatbot-frontend:v1` (check for critical vulnerabilities)
 
 **Checkpoint**: All Docker images built successfully, running as non-root, under 500MB, no critical vulnerabilities
@@ -101,13 +100,13 @@ nt work can begin until Minikube is running
 
 ### Helm Chart Metadata
 
-- [ ] T027 [P] [US3] Create `Chart.yaml` in `k8s/helm-charts/todo-app/` with `apiVersion: v2`, `name: todo-app`, `description: Todo Application with AI Chatbot`, `type: application`, `version: 1.0.0`, `appVersion: "1.0.0"`
-- [ ] T028 [P] [US3] Create `.helmignore` in `k8s/helm-charts/todo-app/` to exclude `.git/`, `*.md` (except Chart README), `values-*.yaml`
-- [ ] T029 [P] [US3] Create `README.md` in `k8s/helm-charts/todo-app/` documenting chart installation, values, and usage
+- [x] T027 [P] [US3] Create `Chart.yaml` in `k8s/helm-charts/todo-app/` with `apiVersion: v2`, `name: todo-app`, `description: Todo Application with AI Chatbot`, `type: application`, `version: 1.0.0`, `appVersion: "1.0.0"`
+- [x] T028 [P] [US3] Create `.helmignore` in `k8s/helm-charts/todo-app/` to exclude `.git/`, `*.md` (except Chart README), `values-*.yaml`
+- [x] T029 [P] [US3] Create `README.md` in `k8s/helm-charts/todo-app/` documenting chart installation, values, and usage
 
 ### Helm Values Configuration
 
-- [ ] T030 [US3] Create `values.yaml` in `k8s/helm-charts/todo-app/` with sections:
+- [x] T030 [US3] Create `values.yaml` in `k8s/helm-charts/todo-app/` with sections:
   - `global.environment: development`
   - `images:` (todoFrontend, todoBackend, chatbotFrontend, chatbotBackend, postgres - all with `repository`, `tag`, `pullPolicy: Never`)
   - `replicas:` (todoFrontend: 2, todoBackend: 1, chatbotFrontend: 2, chatbotBackend: 1, postgres: 1)
@@ -119,7 +118,7 @@ nt work can begin until Minikube is running
 
 ### Template Helpers
 
-- [ ] T031 [P] [US3] Create `templates/_helpers.tpl` in `k8s/helm-charts/todo-app/templates/` with helper templates:
+- [x] T031 [P] [US3] Create `templates/_helpers.tpl` in `k8s/helm-charts/todo-app/templates/` with helper templates:
   - `todo-app.name`: Chart name
   - `todo-app.fullname`: Full qualified app name
   - `todo-app.chart`: Chart name and version
@@ -128,26 +127,26 @@ nt work can begin until Minikube is running
 
 ### Configuration Resources
 
-- [ ] T032 [P] [US3] Create `templates/configmap.yaml` with:
+- [x] T032 [P] [US3] Create `templates/configmap.yaml` with:
   - `metadata.name: app-config`
   - `data:` DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, TODO_API_URL, CHATBOT_API_URL, ENVIRONMENT
   - All values templated from `{{ .Values.config.* }}`
 
-- [ ] T033 [P] [US3] Create `templates/secrets.yaml` with:
+- [x] T033 [P] [US3] Create `templates/secrets.yaml` with:
   - `metadata.name: app-secrets`
   - `type: Opaque`
   - `data:` POSTGRES_PASSWORD, SECRET_KEY, OPENAI_API_KEY (base64-encoded via `{{ .Values.secrets.* | b64enc }}`)
 
 ### PostgreSQL Resources
 
-- [ ] T034 [P] [US3] Create `templates/postgresql-pvc.yaml` with:
+- [x] T034 [P] [US3] Create `templates/postgresql-pvc.yaml` with:
   - `apiVersion: v1`, `kind: PersistentVolumeClaim`
   - `metadata.name: postgres-pvc`
   - `spec.accessModes: [ReadWriteOnce]`
   - `spec.resources.requests.storage: {{ .Values.storage.postgres.size }}`
   - `spec.storageClassName: {{ .Values.storage.postgres.storageClass }}`
 
-- [ ] T035 [US3] Create `templates/postgresql-deployment.yaml` with:
+- [x] T035 [US3] Create `templates/postgresql-deployment.yaml` with:
   - `apiVersion: apps/v1`, `kind: Deployment`
   - `metadata.name: postgresql`, `spec.replicas: {{ .Values.replicas.postgres }}`
   - `spec.template.spec.containers`: image `postgres:15-alpine`, ports `5432`, env from secrets, volumeMounts for PVC
@@ -155,7 +154,7 @@ nt work can begin until Minikube is running
   - Resource limits: `{{ .Values.resources.postgres.limits/requests }}`
   - Liveness/readiness probes: exec `pg_isready -U postgres`
 
-- [ ] T036 [P] [US3] Create `templates/postgresql-service.yaml` with:
+- [x] T036 [P] [US3] Create `templates/postgresql-service.yaml` with:
   - `apiVersion: v1`, `kind: Service`
   - `metadata.name: postgresql`
   - `spec.type: ClusterIP`, `spec.ports`: port `5432`
@@ -163,14 +162,14 @@ nt work can begin until Minikube is running
 
 ### Todo Backend Resources
 
-- [ ] T037 [P] [US3] Create `templates/todo-backend-deployment.yaml` with:
+- [x] T037 [P] [US3] Create `templates/todo-backend-deployment.yaml` with:
   - `apiVersion: apps/v1`, `kind: Deployment`
   - `metadata.name: todo-backend`, `spec.replicas: {{ .Values.replicas.todoBackend }}`
   - `spec.template.spec.containers`: image `todo-backend:v1`, imagePullPolicy `Never`, ports `8000`
   - `env`: DATABASE_URL from secret, envFrom configMapRef `app-config`
   - Resource limits from values, readinessProbe/livenessProbe: httpGet `/health` port `8000`
 
-- [ ] T038 [P] [US3] Create `templates/todo-backend-service.yaml` with:
+- [x] T038 [P] [US3] Create `templates/todo-backend-service.yaml` with:
   - `apiVersion: v1`, `kind: Service`
   - `metadata.name: todo-backend`
   - `spec.type: ClusterIP`, `spec.ports`: port `8000`, targetPort `8000`
@@ -178,14 +177,14 @@ nt work can begin until Minikube is running
 
 ### Todo Frontend Resources
 
-- [ ] T039 [P] [US3] Create `templates/todo-frontend-deployment.yaml` with:
+- [x] T039 [P] [US3] Create `templates/todo-frontend-deployment.yaml` with:
   - `apiVersion: apps/v1`, `kind: Deployment`
   - `metadata.name: todo-frontend`, `spec.replicas: {{ .Values.replicas.todoFrontend }}`
   - `spec.template.spec.containers`: image `todo-frontend:v1`, imagePullPolicy `Never`, ports `3000`
   - `env`: NEXT_PUBLIC_API_URL from config
   - Resource limits from values, readinessProbe/livenessProbe: httpGet `/` port `3000`
 
-- [ ] T040 [P] [US3] Create `templates/todo-frontend-service.yaml` with:
+- [x] T040 [P] [US3] Create `templates/todo-frontend-service.yaml` with:
   - `apiVersion: v1`, `kind: Service`
   - `metadata.name: todo-frontend`
   - `spec.type: NodePort`, `spec.ports`: port `3000`, targetPort `3000`, nodePort `30000`
@@ -193,14 +192,14 @@ nt work can begin until Minikube is running
 
 ### Chatbot Backend Resources
 
-- [ ] T041 [P] [US3] Create `templates/chatbot-backend-deployment.yaml` with:
+- [x] T041 [P] [US3] Create `templates/chatbot-backend-deployment.yaml` with:
   - `apiVersion: apps/v1`, `kind: Deployment`
   - `metadata.name: chatbot-backend`, `spec.replicas: {{ .Values.replicas.chatbotBackend }}`
   - `spec.template.spec.containers`: image `chatbot-backend:v1`, imagePullPolicy `Never`, ports `8001`
   - `env`: DATABASE_URL, OPENAI_API_KEY from secret, TODO_API_URL from config
   - Resource limits from values, readinessProbe/livenessProbe: httpGet `/health` port `8001`
 
-- [ ] T042 [P] [US3] Create `templates/chatbot-backend-service.yaml` with:
+- [x] T042 [P] [US3] Create `templates/chatbot-backend-service.yaml` with:
   - `apiVersion: v1`, `kind: Service`
   - `metadata.name: chatbot-backend`
   - `spec.type: ClusterIP`, `spec.ports`: port `8001`, targetPort `8001`
@@ -208,14 +207,14 @@ nt work can begin until Minikube is running
 
 ### Chatbot Frontend Resources
 
-- [ ] T043 [P] [US3] Create `templates/chatbot-frontend-deployment.yaml` with:
+- [x] T043 [P] [US3] Create `templates/chatbot-frontend-deployment.yaml` with:
   - `apiVersion: apps/v1`, `kind: Deployment`
   - `metadata.name: chatbot-frontend`, `spec.replicas: {{ .Values.replicas.chatbotFrontend }}`
   - `spec.template.spec.containers`: image `chatbot-frontend:v1`, imagePullPolicy `Never`, ports `3001`
   - `env`: NEXT_PUBLIC_API_URL from config (chatbot-backend URL)
   - Resource limits from values, readinessProbe/livenessProbe: httpGet `/` port `3001`
 
-- [ ] T044 [P] [US3] Create `templates/chatbot-frontend-service.yaml` with:
+- [x] T044 [P] [US3] Create `templates/chatbot-frontend-service.yaml` with:
   - `apiVersion: v1`, `kind: Service`
   - `metadata.name: chatbot-frontend`
   - `spec.type: NodePort`, `spec.ports`: port `3001`, targetPort `3001`, nodePort `30001`
@@ -223,10 +222,10 @@ nt work can begin until Minikube is running
 
 ### Helm Chart Validation
 
-- [ ] T045 [US3] Run `helm lint k8s/helm-charts/todo-app` and verify zero errors and warnings
-- [ ] T046 [US3] Run `helm install --dry-run --debug todo-app k8s/helm-charts/todo-app` and verify all templates render correctly
-- [ ] T047 [US3] Verify all resource templates have consistent labels using `{{ include "todo-app.labels" . }}`
-- [ ] T048 [US3] Verify all secrets values are base64-encoded using `| b64enc` template function
+- [x] T045 [US3] Run `helm lint k8s/helm-charts/todo-app` and verify zero errors and warnings
+- [x] T046 [US3] Run `helm install --dry-run --debug todo-app k8s/helm-charts/todo-app` and verify all templates render correctly
+- [x] T047 [US3] Verify all resource templates have consistent labels using `{{ include "todo-app.labels" . }}`
+- [x] T048 [US3] Verify all secrets values are base64-encoded using `| b64enc` template function
 
 **Checkpoint**: Helm chart passes all validation, ready for deployment
 
@@ -240,34 +239,34 @@ nt work can begin until Minikube is running
 
 ### Helm Deployment
 
-- [ ] T049 [US1] Update `values.yaml` secrets section with actual values from `chatbot/backend/.env` (OPENAI_API_KEY) and generate secure SECRET_KEY and POSTGRES_PASSWORD
-- [ ] T050 [US1] Install Helm chart with `helm install todo-app k8s/helm-charts/todo-app`
-- [ ] T051 [US1] Watch pod startup with `kubectl get pods --watch` until all pods show Running status (timeout 2 minutes)
-- [ ] T052 [US1] Verify Helm release status with `helm list` (should show STATUS: deployed)
+- [x] T049 [US1] Update `values.yaml` secrets section with actual values from `chatbot/backend/.env` (OPENAI_API_KEY) and generate secure SECRET_KEY and POSTGRES_PASSWORD
+- [x] T050 [US1] Install Helm chart with `helm install todo-app k8s/helm-charts/todo-app`
+- [x] T051 [US1] Watch pod startup with `kubectl get pods --watch` until all pods show Running status (timeout 2 minutes)
+- [x] T052 [US1] Verify Helm release status with `helm list` (should show STATUS: deployed)
 
 ### Deployment Verification
 
-- [ ] T053 [P] [US1] Verify all deployments are ready with `kubectl get deployments` (READY column should match DESIRED)
-- [ ] T054 [P] [US1] Verify all services have endpoints with `kubectl get endpoints` (all services should have IP addresses listed)
-- [ ] T055 [P] [US1] Verify all pods are Running with `kubectl get pods` (STATUS column should show Running for all 7 pods)
-- [ ] T056 [US1] Check for any pod errors with `kubectl get pods | grep -v Running` (should be empty)
-- [ ] T057 [US1] Verify readiness probes passing with `kubectl get pods` (READY column should show 1/1 or 2/2 for frontends)
+- [x] T053 [P] [US1] Verify all deployments are ready with `kubectl get deployments` (READY column should match DESIRED)
+- [x] T054 [P] [US1] Verify all services have endpoints with `kubectl get endpoints` (all services should have IP addresses listed)
+- [x] T055 [P] [US1] Verify all pods are Running with `kubectl get pods` (STATUS column should show Running for all 7 pods)
+- [x] T056 [US1] Check for any pod errors with `kubectl get pods | grep -v Running` (should be empty)
+- [x] T057 [US1] Verify readiness probes passing with `kubectl get pods` (READY column should show 1/1 or 2/2 for frontends)
 
 ### Pod Logs Verification
 
-- [ ] T058 [P] [US1] Check PostgreSQL pod logs: `kubectl logs -l app=postgresql --tail=20` (should show "database system is ready to accept connections")
-- [ ] T059 [P] [US1] Check Todo backend logs: `kubectl logs -l app=todo-backend --tail=20` (should show "Application startup complete" or "Uvicorn running")
-- [ ] T060 [P] [US1] Check Todo frontend logs: `kubectl logs -l app=todo-frontend --tail=20` (should show "Ready" or "started server")
-- [ ] T061 [P] [US1] Check Chatbot backend logs: `kubectl logs -l app=chatbot-backend --tail=20` (should show successful startup)
-- [ ] T062 [P] [US1] Check Chatbot frontend logs: `kubectl logs -l app=chatbot-frontend --tail=20` (should show successful startup)
+- [x] T058 [P] [US1] Check PostgreSQL pod logs: `kubectl logs -l app=postgresql --tail=20` (should show "database system is ready to accept connections")
+- [x] T059 [P] [US1] Check Todo backend logs: `kubectl logs -l app=todo-backend --tail=20` (should show "Application startup complete" or "Uvicorn running")
+- [x] T060 [P] [US1] Check Todo frontend logs: `kubectl logs -l app=todo-frontend --tail=20` (should show "Ready" or "started server")
+- [x] T061 [P] [US1] Check Chatbot backend logs: `kubectl logs -l app=chatbot-backend --tail=20` (should show successful startup)
+- [x] T062 [P] [US1] Check Chatbot frontend logs: `kubectl logs -l app=chatbot-frontend --tail=20` (should show successful startup)
 
 ### Service Access
 
-- [ ] T063 [US1] Get Minikube IP with `minikube ip` and note for browser access
-- [ ] T064 [US1] Verify Todo frontend accessible: Open `http://<minikube-ip>:30000` in browser (should load homepage)
-- [ ] T065 [US1] Verify Chatbot frontend accessible: Open `http://<minikube-ip>:30001` in browser (should load chat interface)
-- [ ] T066 [US1] Alternative: Use `minikube service todo-frontend` to open browser automatically
-- [ ] T067 [US1] Alternative: Use `minikube service chatbot-frontend` to open browser automatically
+- [x] T063 [US1] Get Minikube IP with `minikube ip` and note for browser access
+- [x] T064 [US1] Verify Todo frontend accessible: Open `http://<minikube-ip>:30000` in browser (should load homepage)
+- [x] T065 [US1] Verify Chatbot frontend accessible: Open `http://<minikube-ip>:30001` in browser (should load chat interface)
+- [x] T066 [US1] Alternative: Use `minikube service todo-frontend` to open browser automatically
+- [x] T067 [US1] Alternative: Use `minikube service chatbot-frontend` to open browser automatically
 
 **Checkpoint**: All services deployed and accessible via browser
 
@@ -281,33 +280,33 @@ nt work can begin until Minikube is running
 
 ### Todo Application Testing
 
-- [ ] T068 [P] [US4] Test Todo frontend: Create a new task "Deployment Test" via UI at `http://<minikube-ip>:30000`
-- [ ] T069 [US4] Verify task appears in task list and persists in database
-- [ ] T070 [P] [US4] Test mark as complete: Click checkbox on "Deployment Test" task, verify status updates
-- [ ] T071 [P] [US4] Test delete: Delete "Deployment Test" task, verify it's removed from list
+- [x] T068 [P] [US4] Test Todo frontend: Create a new task "Deployment Test" via UI at `http://<minikube-ip>:30000`
+- [x] T069 [US4] Verify task appears in task list and persists in database
+- [x] T070 [P] [US4] Test mark as complete: Click checkbox on "Deployment Test" task, verify status updates
+- [x] T071 [P] [US4] Test delete: Delete "Deployment Test" task, verify it's removed from list
 
 ### Chatbot Functionality Testing
 
-- [ ] T072 [P] [US4] Test Chatbot: Open `http://<minikube-ip>:30001` and ask "Add a task called Meeting"
-- [ ] T073 [US4] Verify chatbot creates task and it appears in Todo app at `http://<minikube-ip>:30000`
-- [ ] T074 [P] [US4] Test list tasks: Ask chatbot "Show my tasks", verify it lists all current tasks
-- [ ] T075 [P] [US4] Test delete via chatbot: Ask "Delete the Meeting task", verify task removed
+- [x] T072 [P] [US4] Test Chatbot: Open `http://<minikube-ip>:30001` and ask "Add a task called Meeting"
+- [x] T073 [US4] Verify chatbot creates task and it appears in Todo app at `http://<minikube-ip>:30000`
+- [x] T074 [P] [US4] Test list tasks: Ask chatbot "Show my tasks", verify it lists all current tasks
+- [x] T075 [P] [US4] Test delete via chatbot: Ask "Delete the Meeting task", verify task removed
 
 ### Database Persistence Testing
 
-- [ ] T076 [US4] Test data persistence: Create a task via Todo UI, then delete todo-backend pod with `kubectl delete pod -l app=todo-backend`
-- [ ] T077 [US4] Wait for pod to restart (Kubernetes auto-restarts), verify task still exists (data persisted in PostgreSQL PVC)
-- [ ] T078 [US4] Test database connectivity: Exec into PostgreSQL pod with `kubectl exec -it $(kubectl get pod -l app=postgresql -o name) -- psql -U postgres -c "\l"` and verify `todoapp` database exists
+- [x] T076 [US4] Test data persistence: Create a task via Todo UI, then delete todo-backend pod with `kubectl delete pod -l app=todo-backend`
+- [x] T077 [US4] Wait for pod to restart (Kubernetes auto-restarts), verify task still exists (data persisted in PostgreSQL PVC)
+- [x] T078 [US4] Test database connectivity: Exec into PostgreSQL pod with `kubectl exec -it $(kubectl get pod -l app=postgresql -o name) -- psql -U postgres -c "\l"` and verify `todoapp` database exists
 
 ### Health Endpoint Verification
 
-- [ ] T079 [P] [US4] Test Todo backend health: `kubectl exec -it $(kubectl get pod -l app=todo-frontend -o name | head -1) -- wget -qO- http://todo-backend:8000/health` (should return healthy status)
-- [ ] T080 [P] [US4] Test Chatbot backend health: `kubectl exec -it $(kubectl get pod -l app=chatbot-frontend -o name | head -1) -- wget -qO- http://chatbot-backend:8001/health` (should return healthy status)
+- [x] T079 [P] [US4] Test Todo backend health: `kubectl exec -it $(kubectl get pod -l app=todo-frontend -o name | head -1) -- wget -qO- http://todo-backend:8000/health` (should return healthy status)
+- [x] T080 [P] [US4] Test Chatbot backend health: `kubectl exec -it $(kubectl get pod -l app=chatbot-frontend -o name | head -1) -- wget -qO- http://chatbot-backend:8001/health` (should return healthy status)
 
 ### Resource Monitoring
 
-- [ ] T081 [US4] Check resource usage with `kubectl top pods` (verify no pod exceeding resource limits)
-- [ ] T082 [US4] Check node resource usage with `kubectl top nodes` (verify Minikube has available resources)
+- [x] T081 [US4] Check resource usage with `kubectl top pods` (verify no pod exceeding resource limits)
+- [x] T082 [US4] Check node resource usage with `kubectl top nodes` (verify Minikube has available resources)
 
 **Checkpoint**: Application fully functional, data persists, all health checks passing
 
@@ -321,23 +320,23 @@ nt work can begin until Minikube is running
 
 ### Helm Upgrade Testing
 
-- [ ] T083 [US6] Modify `values.yaml`: Change `replicas.todoBackend` from 1 to 2
-- [ ] T084 [US6] Upgrade Helm release with `helm upgrade todo-app k8s/helm-charts/todo-app`
-- [ ] T085 [US6] Verify upgrade: `kubectl get pods -l app=todo-backend` should show 2 pods Running
-- [ ] T086 [US6] Verify application still works: Access Todo frontend and verify tasks still accessible
+- [x] T083 [US6] Modify `values.yaml`: Change `replicas.todoBackend` from 1 to 2
+- [x] T084 [US6] Upgrade Helm release with `helm upgrade todo-app k8s/helm-charts/todo-app`
+- [x] T085 [US6] Verify upgrade: `kubectl get pods -l app=todo-backend` should show 2 pods Running
+- [x] T086 [US6] Verify application still works: Access Todo frontend and verify tasks still accessible
 
 ### Helm Rollback Testing
 
-- [ ] T087 [US6] Check Helm history with `helm history todo-app` (should show at least 2 revisions)
-- [ ] T088 [US6] Rollback to previous revision with `helm rollback todo-app`
-- [ ] T089 [US6] Verify rollback: `kubectl get pods -l app=todo-backend` should show 1 pod Running (back to original replica count)
-- [ ] T090 [US6] Verify application still works after rollback
+- [x] T087 [US6] Check Helm history with `helm history todo-app` (should show at least 2 revisions)
+- [x] T088 [US6] Rollback to previous revision with `helm rollback todo-app`
+- [x] T089 [US6] Verify rollback: `kubectl get pods -l app=todo-backend` should show 1 pod Running (back to original replica count)
+- [x] T090 [US6] Verify application still works after rollback
 
 ### Helm Status and Values
 
-- [ ] T091 [P] [US6] Get release status with `helm status todo-app` (should show deployed status, resources, and notes)
-- [ ] T092 [P] [US6] Get deployed values with `helm get values todo-app` (should show current configuration)
-- [ ] T093 [US6] Compare with default values: `helm get values todo-app --all` (shows merged values)
+- [x] T091 [P] [US6] Get release status with `helm status todo-app` (should show deployed status, resources, and notes)
+- [x] T092 [P] [US6] Get deployed values with `helm get values todo-app` (should show current configuration)
+- [x] T093 [US6] Compare with default values: `helm get values todo-app --all` (shows merged values)
 
 **Checkpoint**: Helm lifecycle operations (upgrade, rollback) work correctly
 
@@ -378,13 +377,13 @@ nt work can begin until Minikube is running
 
 **Purpose**: Final documentation and cleanup
 
-- [ ] T104 [P] Update root `README.md` with Phase IV deployment section referencing `k8s/helm-charts/todo-app/README.md`
-- [ ] T105 [P] Update `PHASE_IV_INSTRUCTIONS.md` with any lessons learned or deployment gotchas discovered during implementation
-- [ ] T106 [P] Create `k8s/helm-charts/todo-app/TROUBLESHOOTING.md` documenting common issues (ImagePullBackOff, CrashLoopBackOff, service not accessible) and solutions
-- [ ] T107 Create deployment verification checklist in `k8s/helm-charts/todo-app/CHECKLIST.md` based on quality gates from constitution
-- [ ] T108 [P] Document cleanup process: `helm uninstall todo-app`, `minikube stop`, `minikube delete` in README
-- [ ] T109 Add resource utilization table to README showing actual vs allocated resources (from `kubectl top`)
-- [ ] T110 [P] Create quickstart script `k8s/helm-charts/deploy.sh` automating steps: start Minikube, build images, install chart, verify deployment
+- [x] T104 [P] Update root `README.md` with Phase IV deployment section referencing `k8s/helm-charts/todo-app/README.md`
+- [x] T105 [P] Update `PHASE_IV_INSTRUCTIONS.md` with any lessons learned or deployment gotchas discovered during implementation
+- [x] T106 [P] Create `k8s/helm-charts/todo-app/TROUBLESHOOTING.md` documenting common issues (ImagePullBackOff, CrashLoopBackOff, service not accessible) and solutions
+- [x] T107 Create deployment verification checklist in `k8s/helm-charts/todo-app/CHECKLIST.md` based on quality gates from constitution
+- [x] T108 [P] Document cleanup process: `helm uninstall todo-app`, `minikube stop`, `minikube delete` in README
+- [x] T109 Add resource utilization table to README showing actual vs allocated resources (from `kubectl top`)
+- [x] T110 [P] Create quickstart script `k8s/helm-charts/deploy.sh` automating steps: start Minikube, build images, install chart, verify deployment
 - [ ] T111 Run final validation: Execute all steps in `quickstart.md` on a fresh Minikube cluster to ensure reproducibility
 
 **Checkpoint**: Documentation complete, deployment process reproducible

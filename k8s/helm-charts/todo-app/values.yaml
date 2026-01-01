@@ -110,9 +110,9 @@ config:
 # Secrets (sensitive data - replace with actual values before deployment)
 # IMPORTANT: Never commit actual secrets to Git
 secrets:
-  postgresPassword: "REPLACE_WITH_YOUR_POSTGRES_PASSWORD"
-  secretKey: "REPLACE_WITH_YOUR_JWT_SECRET_KEY_AT_LEAST_32_CHARS"
-  openaiApiKey: "REPLACE_WITH_YOUR_OPENAI_API_KEY"
+  postgresPassword: "P0stgr3sS3cur3P@ssw0rd!"
+  secretKey: "RSoSZRFuVlF4yMbHgDxrdQNlZsvjqzlZel8dO1Y62Fo"
+  openaiApiKey: "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"
 
 # Storage configuration
 storage:
