@@ -1,0 +1,282 @@
+# Default values for todo-app
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global configuration
+global:
+  namespace: todo-app
+  environment: production
+  imageRegistry: docker.io
+  imagePullPolicy: IfNotPresent
+
+# Dapr configuration
+dapr:
+  enabled: true
+  sidecarImage: "daprio/daprd:1.12.0"
+  logLevel: info
+  appProtocol: http
+
+# Database configuration
+database:
+  host: postgres-service
+  port: 5432
+  name: todoapp
+  # Secrets should be stored in Kubernetes secrets
+  existingSecret: postgres-secret
+
+# Kafka configuration
+kafka:
+  bootstrapServers: "kafka-cluster-kafka-bootstrap:9092"
+  topics:
+    taskEvents: task-events
+    reminders: reminders
+    taskUpdates: task-updates
+
+# Chat API Service
+chatApi:
+  name: chat-api
+  replicaCount: 2
+  image:
+    repository: todo-app/chat-api
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: postgres-secret
+          key: connection-string
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka-cluster-kafka-bootstrap:9092"
+    - name: LOG_LEVEL
+      value: "info"
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Recurring Tasks Service
+recurringTasks:
+  name: recurring-tasks
+  replicaCount: 2
+  image:
+    repository: todo-app/recurring-tasks
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8001
+    targetPort: 8001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka-cluster-kafka-bootstrap:9092"
+    - name: LOG_LEVEL
+      value: "info"
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8001
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8001
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Notification Service
+notifications:
+  name: notifications
+  replicaCount: 2
+  image:
+    repository: todo-app/notifications
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8002
+    targetPort: 8002
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka-cluster-kafka-bootstrap:9092"
+    - name: LOG_LEVEL
+      value: "info"
+    - name: SMTP_HOST
+      valueFrom:
+        secretKeyRef:
+          name: smtp-secret
+          key: host
+          optional: true
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8002
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8002
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Audit Service
+audit:
+  name: audit
+  replicaCount: 2
+  image:
+    repository: todo-app/audit
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8003
+    targetPort: 8003
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: postgres-secret
+          key: connection-string
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka-cluster-kafka-bootstrap:9092"
+    - name: LOG_LEVEL
+      value: "info"
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8003
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8003
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Frontend Service
+frontend:
+  name: frontend
+  replicaCount: 2
+  image:
+    repository: todo-app/frontend
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    - name: NEXT_PUBLIC_API_URL
+      value: "http://chat-api:8000"
+    - name: NODE_ENV
+      value: "production"
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: todo-app.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+          port: 3000
+        - path: /api
+          pathType: Prefix
+          service: chat-api
+          port: 8000
+  tls:
+    - secretName: todo-app-tls
+      hosts:
+        - todo-app.example.com
+
+# HPA (Horizontal Pod Autoscaler) configuration
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# PodDisruptionBudget configuration
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ServiceAccount configuration
+serviceAccount:
+  create: true
+  name: todo-app-sa
+  annotations: {}
+
+# RBAC configuration
+rbac:
+  create: true
+
+# NetworkPolicy configuration
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress

@@ -1,0 +1,218 @@
+{{- if .Values.autoscaling.enabled }}
+---
+# HorizontalPodAutoscaler for Chat API
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.chatApi.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.chatApi.name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.chatApi.name }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+  {{- range .Values.autoscaling.metrics }}
+  - type: {{ .type }}
+    {{- if eq .type "Resource" }}
+    resource:
+      name: {{ .resource.name }}
+      target:
+        type: {{ .resource.target.type }}
+        averageUtilization: {{ .resource.target.averageUtilization }}
+    {{- end }}
+  {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 4
+        periodSeconds: 30
+      selectPolicy: Max
+---
+# HorizontalPodAutoscaler for Recurring Tasks Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.recurringTasks.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.recurringTasks.name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.recurringTasks.name }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+  {{- range .Values.autoscaling.metrics }}
+  - type: {{ .type }}
+    {{- if eq .type "Resource" }}
+    resource:
+      name: {{ .resource.name }}
+      target:
+        type: {{ .resource.target.type }}
+        averageUtilization: {{ .resource.target.averageUtilization }}
+    {{- end }}
+  {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      selectPolicy: Max
+---
+# HorizontalPodAutoscaler for Notification Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.notifications.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.notifications.name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.notifications.name }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+  {{- range .Values.autoscaling.metrics }}
+  - type: {{ .type }}
+    {{- if eq .type "Resource" }}
+    resource:
+      name: {{ .resource.name }}
+      target:
+        type: {{ .resource.target.type }}
+        averageUtilization: {{ .resource.target.averageUtilization }}
+    {{- end }}
+  {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      selectPolicy: Max
+---
+# HorizontalPodAutoscaler for Audit Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.audit.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.audit.name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.audit.name }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+  {{- range .Values.autoscaling.metrics }}
+  - type: {{ .type }}
+    {{- if eq .type "Resource" }}
+    resource:
+      name: {{ .resource.name }}
+      target:
+        type: {{ .resource.target.type }}
+        averageUtilization: {{ .resource.target.averageUtilization }}
+    {{- end }}
+  {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      selectPolicy: Max
+---
+# HorizontalPodAutoscaler for Frontend
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.frontend.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.frontend.name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.frontend.name }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+  {{- range .Values.autoscaling.metrics }}
+  - type: {{ .type }}
+    {{- if eq .type "Resource" }}
+    resource:
+      name: {{ .resource.name }}
+      target:
+        type: {{ .resource.target.type }}
+        averageUtilization: {{ .resource.target.averageUtilization }}
+    {{- end }}
+  {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      selectPolicy: Max
+{{- end }}

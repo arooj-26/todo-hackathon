@@ -1,0 +1,86 @@
+---
+# Topic: task-events
+# Purpose: All task operations (create, update, complete, delete)
+# Consumers: Recurring Task Service, Audit Service
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: task-events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: todo-kafka
+spec:
+  partitions: 3
+  replicas: 2  # 2 for cloud, 1 for Minikube
+  config:
+    # 90-day retention as per spec
+    retention.ms: 7776000000  # 90 days in milliseconds
+    segment.bytes: 1073741824  # 1GB
+
+    # Performance settings
+    compression.type: producer
+    max.message.bytes: 1048576  # 1MB
+    min.insync.replicas: 2
+
+    # Cleanup policy
+    cleanup.policy: delete
+
+---
+# Topic: reminders
+# Purpose: Reminder notifications before task due dates
+# Consumers: Notification Service
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: reminders
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: todo-kafka
+spec:
+  partitions: 3
+  replicas: 2  # 2 for cloud, 1 for Minikube
+  config:
+    # 7-day retention (reminders are time-sensitive)
+    retention.ms: 604800000  # 7 days in milliseconds
+    segment.bytes: 536870912  # 512MB
+
+    # Performance settings
+    compression.type: producer
+    max.message.bytes: 1048576  # 1MB
+    min.insync.replicas: 2
+
+    # Cleanup policy
+    cleanup.policy: delete
+
+---
+# Topic: task-updates
+# Purpose: Lightweight events for real-time UI synchronization
+# Consumers: WebSocket Service (future), Frontend (via WebSocket)
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: task-updates
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: todo-kafka
+spec:
+  partitions: 3
+  replicas: 2  # 2 for cloud, 1 for Minikube
+  config:
+    # 1-day retention (real-time updates, short-lived)
+    retention.ms: 86400000  # 1 day in milliseconds
+    segment.bytes: 268435456  # 256MB
+
+    # Performance settings
+    compression.type: producer
+    max.message.bytes: 262144  # 256KB (smaller messages)
+    min.insync.replicas: 2
+
+    # Cleanup policy
+    cleanup.policy: delete
+
+---
+# Note: For Minikube deployment, modify replicas to 1:
+# kubectl patch kafkatopic task-events -n kafka --type merge -p '{"spec":{"replicas":1}}'
+# kubectl patch kafkatopic reminders -n kafka --type merge -p '{"spec":{"replicas":1}}'
+# kubectl patch kafkatopic task-updates -n kafka --type merge -p '{"spec":{"replicas":1}}'

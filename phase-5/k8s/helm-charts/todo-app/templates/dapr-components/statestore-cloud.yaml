@@ -1,0 +1,51 @@
+{{- if .Values.dapr.enabled }}
+{{- if eq .Values.global.environment "production" }}
+---
+# Cloud-specific State Store component for production
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: state.postgresql
+  version: v1
+  metadata:
+  # Connection string from secret
+  - name: connectionString
+    secretKeyRef:
+      name: postgres-secret
+      key: connection-string
+  # Table name for state storage
+  - name: tableName
+    value: "dapr_state_store"
+  # Metadata table name
+  - name: metadataTableName
+    value: "dapr_metadata"
+  # Connection pool settings for cloud databases
+  - name: maxConns
+    value: "50"
+  - name: maxIdleTime
+    value: "300s"
+  - name: maxConnLifetime
+    value: "3600s"
+  # Performance settings
+  - name: queryExecMode
+    value: "cache_statement"
+  # Cloud-specific SSL/TLS settings
+  {{- if or (eq .Values.cloudProvider.name "azure") (eq .Values.cloudProvider.name "gcp") }}
+  - name: sslMode
+    value: "require"
+  {{- end }}
+  {{- if eq .Values.cloudProvider.name "azure" }}
+  # Azure Database for PostgreSQL specific settings
+  - name: azureAuthType
+    value: "azuread"  # Use Azure AD authentication if configured
+  {{- end }}
+scopes:
+- chat-api
+- recurring-tasks
+- notifications
+- audit
+{{- end }}
+{{- end }}

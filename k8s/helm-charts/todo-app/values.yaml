@@ -1,25 +1,50 @@
 # Global configuration
 global:
   environment: development
+  imageRegistry: ""  # Can be overridden for cloud registries
+  imagePullSecrets: []
+
+# Dapr configuration
+dapr:
+  enabled: true
+  appProtocol: http
+  logLevel: info
+  enableProfiling: false
+  sidecar:
+    image:
+      registry: daprio
+      name: daprd
+      tag: 1.12.0
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
 
 # Docker images configuration
 images:
-  todoFrontend:
-    repository: todo-frontend
-    tag: v1
-    pullPolicy: Never
-  todoBackend:
-    repository: todo-backend
-    tag: v1
-    pullPolicy: Never
-  chatbotFrontend:
-    repository: chatbot-frontend
-    tag: v1
-    pullPolicy: Never
-  chatbotBackend:
-    repository: chatbot-backend
-    tag: v1
-    pullPolicy: Never
+  chatApi:
+    repository: chat-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  recurringTasks:
+    repository: recurring-tasks
+    tag: latest
+    pullPolicy: IfNotPresent
+  notifications:
+    repository: notifications
+    tag: latest
+    pullPolicy: IfNotPresent
+  audit:
+    repository: audit
+    tag: latest
+    pullPolicy: IfNotPresent
+  frontend:
+    repository: frontend
+    tag: latest
+    pullPolicy: IfNotPresent
   postgres:
     repository: postgres
     tag: 15-alpine
@@ -27,32 +52,40 @@ images:
 
 # Replica counts
 replicas:
-  todoFrontend: 2
-  todoBackend: 1
-  chatbotFrontend: 2
-  chatbotBackend: 1
+  chatApi: 2
+  recurringTasks: 1
+  notifications: 2
+  audit: 1
+  frontend: 2
   postgres: 1
 
 # Service configuration
 services:
-  todoFrontend:
+  chatApi:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+    daprPort: 3500
+  recurringTasks:
+    type: ClusterIP
+    port: 8001
+    targetPort: 8001
+    daprPort: 3501
+  notifications:
+    type: ClusterIP
+    port: 8002
+    targetPort: 8002
+    daprPort: 3502
+  audit:
+    type: ClusterIP
+    port: 8003
+    targetPort: 8003
+    daprPort: 3503
+  frontend:
     type: NodePort
     port: 3000
     targetPort: 3000
     nodePort: 30000
-  todoBackend:
-    type: ClusterIP
-    port: 8000
-    targetPort: 8000
-  chatbotFrontend:
-    type: NodePort
-    port: 3001
-    targetPort: 3001
-    nodePort: 30001
-  chatbotBackend:
-    type: ClusterIP
-    port: 8001
-    targetPort: 8001
   postgres:
     type: ClusterIP
     port: 5432
@@ -60,30 +93,37 @@ services:
 
 # Resource limits and requests
 resources:
-  todoFrontend:
-    requests:
-      cpu: 200m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
-  todoBackend:
+  chatApi:
     requests:
       cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  recurringTasks:
+    requests:
+      cpu: 100m
       memory: 256Mi
     limits:
       cpu: 500m
       memory: 512Mi
-  chatbotFrontend:
+  notifications:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  audit:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  frontend:
     requests:
       cpu: 200m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
-  chatbotBackend:
-    requests:
-      cpu: 250m
       memory: 256Mi
     limits:
       cpu: 500m
@@ -98,25 +138,232 @@ resources:
 
 # Application configuration (non-sensitive)
 config:
+  # Database
   databaseHost: postgresql
   databasePort: "5432"
   databaseName: todoapp
-  todoApiUrl: http://todo-backend:8000
-  chatbotApiUrl: http://chatbot-backend:8001
-  todoFrontendPort: "3000"
-  chatbotFrontendPort: "3001"
+  databaseUser: todouser
+
+  # Service URLs
+  chatApiUrl: http://chat-api:8000
+  recurringTasksUrl: http://recurring-tasks:8001
+  notificationsUrl: http://notifications:8002
+  auditUrl: http://audit:8003
+  frontendUrl: http://frontend:3000
+
+  # Dapr
+  daprHttpPort: "3500"
+  daprGrpcPort: "50001"
+  daprPlacementHost: "dapr-placement-server.dapr-system.svc.cluster.local:50006"
+
+  # Kafka
+  kafkaBrokers: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  kafkaTopics:
+    taskEvents: "task-events"
+    reminders: "reminders"
+    taskUpdates: "task-updates"
+
+  # Application settings
   environment: development
+  logLevel: INFO
+  corsOrigins: "*"
+
+  # Feature flags
+  features:
+    recurringTasks: true
+    reminders: true
+    tags: true
+    search: true
+    audit: true
 
 # Secrets (sensitive data - replace with actual values before deployment)
 # IMPORTANT: Never commit actual secrets to Git
+# In production, use Kubernetes Secrets or external secret managers
 secrets:
+  # Database
   postgresPassword: "P0stgr3sS3cur3P@ssw0rd!"
-  secretKey: "RSoSZRFuVlF4yMbHgDxrdQNlZsvjqzlZel8dO1Y62Fo"
-  openaiApiKey: "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"
+  databaseUrl: ""  # Will be constructed from other values if empty
+
+  # Application
+  jwtSecret: "your-jwt-secret-key-change-in-production"
+  secretKey: "your-secret-key-change-in-production"
+
+  # External services (optional)
+  openaiApiKey: ""
+  sendgridApiKey: ""
+  twilioAccountSid: ""
+  twilioAuthToken: ""
 
 # Storage configuration
 storage:
   postgres:
-    size: 5Gi
+    enabled: true
+    size: 10Gi
     storageClass: standard
     accessMode: ReadWriteOnce
+
+# Autoscaling configuration
+autoscaling:
+  enabled: false
+  chatApi:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  recurringTasks:
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  notifications:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  audit:
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  frontend:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  chatApi:
+    minAvailable: 1
+  recurringTasks:
+    minAvailable: 1
+  notifications:
+    minAvailable: 1
+  audit:
+    minAvailable: 1
+  frontend:
+    minAvailable: 1
+
+# Health checks
+healthChecks:
+  chatApi:
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+  recurringTasks:
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8001
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8001
+      initialDelaySeconds: 10
+      periodSeconds: 5
+  notifications:
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8002
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8002
+      initialDelaySeconds: 10
+      periodSeconds: 5
+  audit:
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8003
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8003
+      initialDelaySeconds: 10
+      periodSeconds: 5
+  frontend:
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+
+# Ingress configuration (for cloud deployments)
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: todo-app.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: chat-api
+  tls:
+    - secretName: todo-app-tls
+      hosts:
+        - todo-app.example.com
+
+# Monitoring and observability
+monitoring:
+  enabled: false
+  prometheus:
+    enabled: false
+    port: 9090
+    scrapeInterval: 30s
+  grafana:
+    enabled: false
+  zipkin:
+    enabled: false
+    endpoint: http://zipkin.monitoring.svc.cluster.local:9411
+
+# Kafka configuration (if using embedded Strimzi)
+kafka:
+  enabled: true
+  replicas: 3
+  partitions: 3
+  replicationFactor: 2
+  storageSize: 10Gi
+  storageClass: standard
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    username: todouser
+    database: todoapp
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: standard

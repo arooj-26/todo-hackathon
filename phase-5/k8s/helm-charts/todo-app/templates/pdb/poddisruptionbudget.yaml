@@ -1,0 +1,72 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+---
+# PodDisruptionBudget for Chat API
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.chatApi.name }}-pdb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.chatApi.name }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ .Values.chatApi.name }}
+---
+# PodDisruptionBudget for Recurring Tasks Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.recurringTasks.name }}-pdb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.recurringTasks.name }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ .Values.recurringTasks.name }}
+---
+# PodDisruptionBudget for Notification Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.notifications.name }}-pdb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.notifications.name }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ .Values.notifications.name }}
+---
+# PodDisruptionBudget for Audit Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.audit.name }}-pdb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.audit.name }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ .Values.audit.name }}
+---
+# PodDisruptionBudget for Frontend
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Values.frontend.name }}-pdb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.frontend.name }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ .Values.frontend.name }}
+{{- end }}

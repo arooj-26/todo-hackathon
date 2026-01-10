@@ -1,0 +1,27 @@
+# Notification Service Dependencies - Phase V
+# FastAPI and ASGI server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Dapr HTTP client for Jobs API and pub/sub
+httpx==0.25.2
+
+# Data validation
+pydantic==2.5.2
+
+# Structured logging
+structlog==23.3.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Email sending (for notification channels)
+aiosmtplib==3.0.1
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+
+# Code quality
+ruff==0.1.8
+black==23.12.1

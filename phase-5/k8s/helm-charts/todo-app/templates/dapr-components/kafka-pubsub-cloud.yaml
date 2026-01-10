@@ -1,0 +1,67 @@
+{{- if .Values.dapr.enabled }}
+{{- if eq .Values.global.environment "production" }}
+---
+# Cloud-specific Kafka Pub/Sub component for production
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kafka-pubsub
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  # Kafka brokers - use managed Kafka service in cloud
+  - name: brokers
+    value: {{ .Values.kafka.bootstrapServers | quote }}
+  # Consumer group for this application
+  - name: consumerGroup
+    value: "todo-app-group"
+  # Client ID
+  - name: clientID
+    value: "todo-app"
+  # Authentication (use for managed Kafka services)
+  {{- if .Values.kafka.saslEnabled }}
+  - name: authType
+    value: "password"
+  - name: saslUsername
+    secretKeyRef:
+      name: kafka-secret
+      key: sasl-username
+  - name: saslPassword
+    secretKeyRef:
+      name: kafka-secret
+      key: sasl-password
+  {{- end }}
+  # TLS configuration for secure connections
+  {{- if .Values.kafka.tlsEnabled }}
+  - name: skipVerify
+    value: "false"
+  - name: caCert
+    secretKeyRef:
+      name: kafka-tls-secret
+      key: ca.crt
+  {{- end }}
+  # Azure Event Hubs specific settings (if using Event Hubs for Kafka)
+  {{- if eq .Values.cloudProvider.name "azure" }}
+  {{- if .Values.kafka.useEventHubs }}
+  - name: authType
+    value: "azuread"
+  - name: eventHubNamespace
+    value: {{ .Values.kafka.eventHubNamespace | quote }}
+  {{- end }}
+  {{- end }}
+  # Performance tuning
+  - name: maxMessageBytes
+    value: "1048576"  # 1MB max message size
+  - name: sessionTimeout
+    value: "6000"  # 6 seconds
+  - name: heartbeatInterval
+    value: "2000"  # 2 seconds
+scopes:
+- chat-api
+- recurring-tasks
+- notifications
+- audit
+{{- end }}
+{{- end }}

@@ -1,0 +1,179 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: todo-app-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: todo-app
+    app.kubernetes.io/part-of: todo-app
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: todo-app-services
+      interval: 30s
+      rules:
+        # Service availability alerts
+        - alert: ServiceDown
+          expr: up{job=~".*todo-app.*"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service {{ $labels.job }} is down"
+            description: "{{ $labels.job }} has been down for more than 2 minutes."
+
+        # High error rate
+        - alert: HighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{status=~"5..",job=~".*todo-app.*"}[5m]))
+              /
+              sum(rate(http_requests_total{job=~".*todo-app.*"}[5m]))
+            ) * 100 > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High error rate detected"
+            description: "Error rate is {{ $value }}% for the last 5 minutes."
+
+        # High latency
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{job=~".*todo-app.*"}[5m])) by (le, job)
+            ) > 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High latency detected for {{ $labels.job }}"
+            description: "95th percentile latency is {{ $value }}s for {{ $labels.job }}."
+
+        # Pod restart alerts
+        - alert: PodRestartingTooOften
+          expr: rate(kube_pod_container_status_restarts_total{namespace=~"default|todo-app"}[15m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} is restarting frequently"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last 15 minutes."
+
+        # Memory usage alerts
+        - alert: HighMemoryUsage
+          expr: |
+            (
+              container_memory_working_set_bytes{namespace=~"default|todo-app",container!=""}
+              /
+              container_spec_memory_limit_bytes{namespace=~"default|todo-app",container!=""}
+            ) * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage for {{ $labels.pod }}"
+            description: "Memory usage is {{ $value }}% for {{ $labels.pod }}."
+
+        # CPU usage alerts
+        - alert: HighCPUUsage
+          expr: |
+            (
+              rate(container_cpu_usage_seconds_total{namespace=~"default|todo-app",container!=""}[5m])
+              /
+              container_spec_cpu_quota{namespace=~"default|todo-app",container!=""} * 100000
+            ) * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage for {{ $labels.pod }}"
+            description: "CPU usage is {{ $value }}% for {{ $labels.pod }}."
+
+    - name: todo-app-kafka
+      interval: 30s
+      rules:
+        # Kafka consumer lag
+        - alert: KafkaConsumerLag
+          expr: |
+            kafka_consumer_group_lag{group=~".*todo-app.*"} > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High Kafka consumer lag"
+            description: "Consumer group {{ $labels.group }} has lag of {{ $value }} messages on topic {{ $labels.topic }}."
+
+        # Event processing failures
+        - alert: HighEventProcessingFailures
+          expr: |
+            (
+              sum(rate(dapr_component_pubsub_ingress_failed_total{app_id=~".*todo-app.*"}[5m]))
+              /
+              sum(rate(dapr_component_pubsub_ingress_total{app_id=~".*todo-app.*"}[5m]))
+            ) * 100 > 5
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High event processing failure rate"
+            description: "Event processing failure rate is {{ $value }}% for {{ $labels.app_id }}."
+
+    - name: todo-app-database
+      interval: 30s
+      rules:
+        # Database connection pool exhaustion
+        - alert: DatabaseConnectionPoolExhausted
+          expr: |
+            (
+              db_connection_pool_current{job=~".*todo-app.*"}
+              /
+              db_connection_pool_max{job=~".*todo-app.*"}
+            ) * 100 > 90
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Database connection pool nearly exhausted"
+            description: "Database connection pool is {{ $value }}% utilized."
+
+        # Slow queries
+        - alert: SlowDatabaseQueries
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(db_query_duration_seconds_bucket{job=~".*todo-app.*"}[5m])) by (le)
+            ) > 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Slow database queries detected"
+            description: "95th percentile query duration is {{ $value }}s."
+
+    - name: todo-app-dapr
+      interval: 30s
+      rules:
+        # Dapr sidecar unhealthy
+        - alert: DaprSidecarUnhealthy
+          expr: dapr_sidecar_health{namespace=~"default|todo-app"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Dapr sidecar unhealthy for {{ $labels.pod }}"
+            description: "Dapr sidecar in pod {{ $labels.pod }} has been unhealthy for more than 2 minutes."
+
+        # Service invocation failures
+        - alert: HighServiceInvocationFailures
+          expr: |
+            (
+              sum(rate(dapr_runtime_service_invocation_req_sent_total{result="failure"}[5m]))
+              /
+              sum(rate(dapr_runtime_service_invocation_req_sent_total[5m]))
+            ) * 100 > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High Dapr service invocation failure rate"
+            description: "Service invocation failure rate is {{ $value }}%."

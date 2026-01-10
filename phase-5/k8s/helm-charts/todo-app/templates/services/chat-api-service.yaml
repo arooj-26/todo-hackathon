@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.chatApi.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.chatApi.name }}
+    component: backend
+    tier: api
+spec:
+  type: {{ .Values.chatApi.service.type }}
+  ports:
+    - port: {{ .Values.chatApi.service.port }}
+      targetPort: {{ .Values.chatApi.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.chatApi.name }}
+  sessionAffinity: None

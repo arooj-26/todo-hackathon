@@ -1,13 +1,5 @@
 """Password hashing and verification using bcrypt."""
-from passlib.context import CryptContext
-
-# Configure password hashing context
-# Using bcrypt 4.1.3 which is compatible with passlib 1.7.4
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__default_rounds=12,  # Secure default for production
-)
+import bcrypt
 
 
 def hash_password(password: str) -> str:
@@ -23,7 +15,11 @@ def hash_password(password: str) -> str:
     Note:
         Bcrypt automatically handles passwords longer than 72 bytes
     """
-    return pwd_context.hash(password)
+    # Generate salt and hash the password
+    salt = bcrypt.gensalt(rounds=12)
+    password_bytes = password.encode('utf-8')
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -37,4 +33,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True if password matches hash, False otherwise
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        password_bytes = plain_password.encode('utf-8')
+        hashed_bytes = hashed_password.encode('utf-8')
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
+    except Exception:
+        return False

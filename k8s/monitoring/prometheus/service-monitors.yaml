@@ -1,0 +1,109 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: todo-app-services
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: todo-app
+    app.kubernetes.io/part-of: todo-app
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: todo-app
+  namespaceSelector:
+    matchNames:
+      - default
+      - todo-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: todo-app-chat-api
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: chat-api
+    app.kubernetes.io/part-of: todo-app
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: chat-api
+  namespaceSelector:
+    matchNames:
+      - default
+      - todo-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: todo-app-recurring-tasks
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: recurring-tasks
+    app.kubernetes.io/part-of: todo-app
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: recurring-tasks
+  namespaceSelector:
+    matchNames:
+      - default
+      - todo-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: todo-app-notifications
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: notifications
+    app.kubernetes.io/part-of: todo-app
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: notifications
+  namespaceSelector:
+    matchNames:
+      - default
+      - todo-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: todo-app-audit
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: audit
+    app.kubernetes.io/part-of: todo-app
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: audit
+  namespaceSelector:
+    matchNames:
+      - default
+      - todo-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.notifications.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.notifications.name }}
+    component: backend
+    tier: worker
+spec:
+  type: {{ .Values.notifications.service.type }}
+  ports:
+    - port: {{ .Values.notifications.service.port }}
+      targetPort: {{ .Values.notifications.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.notifications.name }}
+  sessionAffinity: None

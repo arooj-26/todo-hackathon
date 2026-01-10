@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.audit.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.audit.name }}
+    component: backend
+    tier: worker
+spec:
+  type: {{ .Values.audit.service.type }}
+  ports:
+    - port: {{ .Values.audit.service.port }}
+      targetPort: {{ .Values.audit.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.audit.name }}
+  sessionAffinity: None

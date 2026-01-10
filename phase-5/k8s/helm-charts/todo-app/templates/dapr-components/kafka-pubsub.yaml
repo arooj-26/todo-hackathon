@@ -1,0 +1,61 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kafka-pubsub
+  namespace: {{ .Values.namespace | default "todo" }}
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    # Kafka broker addresses
+    - name: brokers
+      value: "{{ .Values.kafka.brokers | default "todo-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092" }}"
+
+    # Consumer group for this application
+    - name: consumerGroup
+      value: "todo-app-group"
+
+    # Client ID
+    - name: clientID
+      value: "todo-app"
+
+    # Authentication type (none for local, SASL for cloud)
+    - name: authType
+      value: "{{ .Values.kafka.authType | default "none" }}"
+
+    {{- if eq (.Values.kafka.authType | default "none") "password" }}
+    # SASL Username (for cloud Kafka like Redpanda Cloud)
+    - name: saslUsername
+      secretKeyRef:
+        name: kafka-secrets
+        key: saslUsername
+
+    # SASL Password
+    - name: saslPassword
+      secretKeyRef:
+        name: kafka-secrets
+        key: saslPassword
+
+    # SASL Mechanism
+    - name: saslMechanism
+      value: "{{ .Values.kafka.saslMechanism | default "SCRAM-SHA-256" }}"
+    {{- end }}
+
+    # Consumer configuration
+    - name: maxMessageBytes
+      value: "1048576"  # 1MB
+
+    # Initial offset (oldest or newest)
+    - name: initialOffset
+      value: "newest"
+
+    # Version of Kafka protocol
+    - name: version
+      value: "{{ .Values.kafka.version | default "3.6.0" }}"
+
+    # Disable TLS for local development
+    - name: disableTls
+      value: "{{ .Values.kafka.disableTls | default "true" }}"
+
+---
+# Topic subscriptions are defined in application code via /dapr/subscribe endpoint

@@ -1,0 +1,342 @@
+# Cloud-specific values for production deployment
+# Override defaults for AKS/GKE/OKE deployments
+
+# Global configuration for cloud
+global:
+  namespace: todo-app
+  environment: production
+  imageRegistry: docker.io  # Replace with your container registry (ACR, GCR, OCIR)
+  imagePullPolicy: IfNotPresent
+
+# Dapr configuration for cloud
+dapr:
+  enabled: true
+  sidecarImage: "daprio/daprd:1.12.0"
+  logLevel: info  # Use 'info' or 'warn' in production
+  appProtocol: http
+
+# Database configuration - use managed cloud databases
+database:
+  # For Azure: Azure Database for PostgreSQL
+  # For GCP: Cloud SQL for PostgreSQL
+  # For Oracle: Autonomous Database for PostgreSQL
+  host: ""  # Set via --set or external-secrets
+  port: 5432
+  name: todoapp
+  existingSecret: postgres-secret  # Use external secret manager
+
+# Kafka configuration - use managed Kafka or Redpanda Cloud
+kafka:
+  # For production, consider:
+  # - Azure Event Hubs for Kafka
+  # - Confluent Cloud
+  # - Redpanda Cloud
+  # - Self-managed Strimzi with persistent volumes
+  bootstrapServers: "kafka-cluster-kafka-bootstrap:9092"
+  topics:
+    taskEvents: task-events
+    reminders: reminders
+    taskUpdates: task-updates
+
+# Chat API Service - Cloud configuration
+chatApi:
+  name: chat-api
+  replicaCount: 3  # Higher replicas for production
+  image:
+    repository: todo-app/chat-api
+    tag: "latest"  # Use semantic versioning in production (e.g., "1.0.0")
+  service:
+    type: ClusterIP  # Use Ingress instead of LoadBalancer
+    port: 8000
+    targetPort: 8000
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: postgres-secret
+          key: connection-string
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: "kafka-cluster-kafka-bootstrap:9092"
+    - name: LOG_LEVEL
+      value: "info"
+    - name: ENVIRONMENT
+      value: "production"
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Recurring Tasks Service - Cloud configuration
+recurringTasks:
+  name: recurring-tasks
+  replicaCount: 3
+  image:
+    repository: todo-app/recurring-tasks
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8001
+    targetPort: 8001
+  resources:
+    requests:
+      cpu: 150m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Notification Service - Cloud configuration
+notifications:
+  name: notifications
+  replicaCount: 3
+  image:
+    repository: todo-app/notifications
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8002
+    targetPort: 8002
+  resources:
+    requests:
+      cpu: 150m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Audit Service - Cloud configuration
+audit:
+  name: audit
+  replicaCount: 3
+  image:
+    repository: todo-app/audit
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8003
+    targetPort: 8003
+  resources:
+    requests:
+      cpu: 150m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Frontend Service - Cloud configuration
+frontend:
+  name: frontend
+  replicaCount: 3
+  image:
+    repository: todo-app/frontend
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    - name: NEXT_PUBLIC_API_URL
+      value: "https://api.todoapp.example.com"  # Update with your domain
+    - name: NODE_ENV
+      value: "production"
+
+# Ingress configuration for cloud (NGINX Ingress Controller)
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://todoapp.example.com"
+  hosts:
+    - host: todoapp.example.com  # Update with your domain
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+          port: 3000
+    - host: api.todoapp.example.com  # API subdomain
+      paths:
+        - path: /
+          pathType: Prefix
+          service: chat-api
+          port: 8000
+  tls:
+    - secretName: todoapp-tls
+      hosts:
+        - todoapp.example.com
+        - api.todoapp.example.com
+
+# HPA (Horizontal Pod Autoscaler) configuration for cloud
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# PodDisruptionBudget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2  # Keep at least 2 pods running during updates
+
+# ServiceAccount configuration
+serviceAccount:
+  create: true
+  name: todo-app-sa
+  annotations:
+    # Azure: Add Azure AD workload identity annotation
+    # azure.workload.identity/client-id: "<client-id>"
+    # GCP: Add GCP workload identity annotation
+    # iam.gke.io/gcp-service-account: "<gsa-name>@<project-id>.iam.gserviceaccount.com"
+    # Oracle: Add OCI annotation if needed
+
+# RBAC configuration
+rbac:
+  create: true
+
+# NetworkPolicy for enhanced security
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: todo-app
+      - podSelector:
+          matchLabels:
+            app: ingress-nginx
+  egress:
+    - to:
+      - namespaceSelector: {}
+      ports:
+      - protocol: TCP
+        port: 443  # HTTPS
+      - protocol: TCP
+        port: 5432  # PostgreSQL
+      - protocol: TCP
+        port: 9092  # Kafka
+
+# Persistent storage for stateful components
+persistence:
+  enabled: true
+  storageClass: ""  # Use cloud-specific default storage class
+  # Azure: managed-premium or azurefile
+  # GCP: pd-ssd or pd-standard
+  # Oracle: oci-bv or oci
+  size: 20Gi
+
+# Monitoring and observability
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+  grafana:
+    enabled: true
+  jaeger:
+    enabled: true
+
+# Backup configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: 30  # Keep backups for 30 days
+
+# Security settings
+security:
+  podSecurityPolicy:
+    enabled: true
+  seccomp:
+    enabled: true
+    profile: runtime/default
+  appArmor:
+    enabled: false  # Enable if using AppArmor
+
+# Cloud-specific configurations
+cloudProvider:
+  # Options: azure, gcp, oracle, aws
+  name: ""  # Set via --set cloudProvider.name=azure
+
+  # Azure-specific
+  azure:
+    resourceGroup: ""
+    aksClusterName: ""
+    acrName: ""
+    keyVaultName: ""
+
+  # GCP-specific
+  gcp:
+    projectId: ""
+    gkeClusterName: ""
+    gcrRegistry: ""
+    secretManagerProject: ""
+
+  # Oracle-specific
+  oracle:
+    compartmentId: ""
+    okeClusterId: ""
+    ocirRegistry: ""
+    vaultId: ""
+
+# External secrets integration
+externalSecrets:
+  enabled: true
+  backend: ""  # Options: vault, azure-keyvault, gcp-secretmanager, oracle-vault
+  refreshInterval: 1h
+
+# Rate limiting
+rateLimit:
+  enabled: true
+  requestsPerSecond: 100
+  burst: 200
+
+# Circuit breaker configuration
+circuitBreaker:
+  enabled: true
+  timeout: 5s
+  maxRetries: 3
+  backoffInterval: 1s

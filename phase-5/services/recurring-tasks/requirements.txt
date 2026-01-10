@@ -1,0 +1,27 @@
+# Recurring Task Service Dependencies - Phase V
+# FastAPI and ASGI server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Dapr HTTP client for pub/sub and service invocation
+httpx==0.25.2
+
+# Data validation
+pydantic==2.5.2
+
+# Date/time handling for recurrence calculation
+python-dateutil==2.8.2
+
+# Structured logging
+structlog==23.3.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+
+# Code quality
+ruff==0.1.8
+black==23.12.1

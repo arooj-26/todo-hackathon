@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-app.fullname" . }}-chat-api
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: chat-api
+spec:
+  replicas: {{ .Values.replicas.chatApi }}
+  selector:
+    matchLabels:
+      {{- include "todo-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: chat-api
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.dapr.enabled }}
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "chat-api"
+        dapr.io/app-port: "{{ .Values.services.chatApi.port }}"
+        dapr.io/app-protocol: "{{ .Values.dapr.appProtocol }}"
+        dapr.io/enable-api-logging: "true"
+        dapr.io/log-level: "{{ .Values.dapr.logLevel }}"
+        dapr.io/sidecar-cpu-request: "{{ .Values.dapr.sidecar.resources.requests.cpu }}"
+        dapr.io/sidecar-memory-request: "{{ .Values.dapr.sidecar.resources.requests.memory }}"
+        dapr.io/sidecar-cpu-limit: "{{ .Values.dapr.sidecar.resources.limits.cpu }}"
+        dapr.io/sidecar-memory-limit: "{{ .Values.dapr.sidecar.resources.limits.memory }}"
+        {{- end }}
+      labels:
+        {{- include "todo-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: chat-api
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: chat-api
+        image: "{{ .Values.global.imageRegistry }}{{ .Values.images.chatApi.repository }}:{{ .Values.images.chatApi.tag }}"
+        imagePullPolicy: {{ .Values.images.chatApi.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.services.chatApi.port }}
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "{{ .Values.services.chatApi.port }}"
+        - name: ENVIRONMENT
+          value: {{ .Values.config.environment }}
+        - name: LOG_LEVEL
+          value: {{ .Values.config.logLevel }}
+        - name: DATABASE_HOST
+          value: {{ .Values.config.databaseHost }}
+        - name: DATABASE_PORT
+          value: "{{ .Values.config.databasePort }}"
+        - name: DATABASE_NAME
+          value: {{ .Values.config.databaseName }}
+        - name: DATABASE_USER
+          value: {{ .Values.config.databaseUser }}
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "todo-app.fullname" . }}-secrets
+              key: postgresPassword
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "todo-app.fullname" . }}-secrets
+              key: jwtSecret
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "todo-app.fullname" . }}-secrets
+              key: secretKey
+        - name: DAPR_HTTP_PORT
+          value: "{{ .Values.config.daprHttpPort }}"
+        - name: DAPR_GRPC_PORT
+          value: "{{ .Values.config.daprGrpcPort }}"
+        - name: KAFKA_BROKERS
+          value: {{ .Values.config.kafkaBrokers }}
+        - name: CORS_ORIGINS
+          value: {{ .Values.config.corsOrigins }}
+        {{- if .Values.healthChecks.chatApi.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.healthChecks.chatApi.livenessProbe | nindent 10 }}
+        {{- end }}
+        {{- if .Values.healthChecks.chatApi.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.healthChecks.chatApi.readinessProbe | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources.chatApi | nindent 10 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "todo-app.fullname" . }}-config

@@ -284,6 +284,36 @@ See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues and solutions.
 4. Update `_helpers.tpl` if needed
 5. Test deployment
 
+## kubectl-ai (Optional AI Assistant)
+
+kubectl-ai is an optional tool that allows natural language Kubernetes operations using OpenAI.
+
+### Installation
+
+```bash
+# Download and install kubectl-ai
+curl -L "https://github.com/sozercan/kubectl-ai/releases/download/v0.0.13/kubectl-ai_windows_amd64.zip" -o kubectl-ai.zip
+unzip kubectl-ai.zip
+mv kubectl-ai.exe ~/.local/bin/  # or add to PATH
+
+# Configure OpenAI API key
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+### Usage Examples
+
+kubectl-ai translates natural language to kubectl commands. All operations can also be performed with standard kubectl:
+
+| kubectl-ai Command | Standard kubectl Alternative |
+|-------------------|----------------------------|
+| `kubectl-ai "show me all pods"` | `kubectl get pods` |
+| `kubectl-ai "scale todo-backend to 3 replicas"` | `kubectl scale deployment todo-backend --replicas=3` |
+| `kubectl-ai "show logs from chatbot-backend"` | `kubectl logs -l app=chatbot-backend` |
+| `kubectl-ai "describe the todo-backend service"` | `kubectl describe service todo-backend` |
+| `kubectl-ai "get frontend service URLs"` | `minikube service list` or `kubectl get services` |
+
+**Note**: kubectl-ai requires an OpenAI API key and internet connectivity. All functionality is available through standard kubectl commands.
+
 ## Support
 
 For issues and questions:

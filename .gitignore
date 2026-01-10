@@ -70,6 +70,19 @@ yarn-error.log*
 
 # Kubernetes secrets (environment-specific Helm values)
 k8s/helm-charts/todo-app/values-*.yaml
+k8s/helm-charts/**/secrets.yaml
+k8s/helm-charts/**/values-secrets.yaml
+k8s/**/*-secrets.yaml
+**/secret*.yaml
+**/secrets/
+
+# API Keys and credentials
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+service-account*.json
 
 # Additional Kubernetes and Docker patterns
 *.log

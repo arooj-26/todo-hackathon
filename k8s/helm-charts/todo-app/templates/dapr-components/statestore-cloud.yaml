@@ -1,0 +1,82 @@
+{{- if and .Values.dapr.enabled (eq .Values.global.environment "production") }}
+# Cloud-specific state store components
+---
+# Azure Cosmos DB State Store (recommended for Azure)
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore-cosmosdb
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: state.azure.cosmosdb
+  version: v1
+  metadata:
+  - name: url
+    value: "https://your-account.documents.azure.com:443/"
+  - name: masterKey
+    secretKeyRef:
+      name: {{ include "todo-app.fullname" . }}-cosmosdb-secret
+      key: masterKey
+  - name: database
+    value: "todoapp"
+  - name: collection
+    value: "state"
+  - name: actorStateStore
+    value: "true"
+{{- end }}
+
+{{- if false }}
+---
+# GCP Firestore State Store (recommended for GCP)
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore-firestore
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: state.gcp.firestore
+  version: v1
+  metadata:
+  - name: type
+    value: "service_account"
+  - name: project_id
+    value: "your-project-id"
+  - name: private_key_id
+    secretKeyRef:
+      name: gcp-credentials
+      key: private_key_id
+  - name: private_key
+    secretKeyRef:
+      name: gcp-credentials
+      key: private_key
+  - name: client_email
+    value: "your-service-account@your-project.iam.gserviceaccount.com"
+  - name: client_id
+    value: "your-client-id"
+  - name: entity_kind
+    value: "DaprState"
+{{- end }}
+
+{{- if false }}
+---
+# Redis State Store (cloud-agnostic, can use Azure Cache for Redis, etc.)
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore-redis
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: "your-redis-host.redis.cache.windows.net:6380"
+  - name: redisPassword
+    secretKeyRef:
+      name: redis-secret
+      key: password
+  - name: enableTLS
+    value: "true"
+  - name: actorStateStore
+    value: "true"
+{{- end }}

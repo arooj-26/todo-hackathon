@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-app.fullname" . }}-frontend
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.replicas.frontend }}
+  selector:
+    matchLabels:
+      {{- include "todo-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        {{- include "todo-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: frontend
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: frontend
+        image: "{{ .Values.global.imageRegistry }}{{ .Values.images.frontend.repository }}:{{ .Values.images.frontend.tag }}"
+        imagePullPolicy: {{ .Values.images.frontend.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.services.frontend.port }}
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "{{ .Values.services.frontend.port }}"
+        - name: ENVIRONMENT
+          value: {{ .Values.config.environment }}
+        - name: NEXT_PUBLIC_API_URL
+          value: {{ .Values.config.chatApiUrl }}
+        - name: NEXT_PUBLIC_ENVIRONMENT
+          value: {{ .Values.config.environment }}
+        {{- if .Values.healthChecks.frontend.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.healthChecks.frontend.livenessProbe | nindent 10 }}
+        {{- end }}
+        {{- if .Values.healthChecks.frontend.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.healthChecks.frontend.readinessProbe | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources.frontend | nindent 10 }}

@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-app.fullname" . }}-audit
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: audit
+spec:
+  replicas: {{ .Values.replicas.audit }}
+  selector:
+    matchLabels:
+      {{- include "todo-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: audit
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.dapr.enabled }}
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "audit"
+        dapr.io/app-port: "{{ .Values.services.audit.port }}"
+        dapr.io/app-protocol: "{{ .Values.dapr.appProtocol }}"
+        dapr.io/enable-api-logging: "true"
+        dapr.io/log-level: "{{ .Values.dapr.logLevel }}"
+        dapr.io/sidecar-cpu-request: "{{ .Values.dapr.sidecar.resources.requests.cpu }}"
+        dapr.io/sidecar-memory-request: "{{ .Values.dapr.sidecar.resources.requests.memory }}"
+        dapr.io/sidecar-cpu-limit: "{{ .Values.dapr.sidecar.resources.limits.cpu }}"
+        dapr.io/sidecar-memory-limit: "{{ .Values.dapr.sidecar.resources.limits.memory }}"
+        {{- end }}
+      labels:
+        {{- include "todo-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: audit
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: audit
+        image: "{{ .Values.global.imageRegistry }}{{ .Values.images.audit.repository }}:{{ .Values.images.audit.tag }}"
+        imagePullPolicy: {{ .Values.images.audit.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.services.audit.port }}
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "{{ .Values.services.audit.port }}"
+        - name: ENVIRONMENT
+          value: {{ .Values.config.environment }}
+        - name: LOG_LEVEL
+          value: {{ .Values.config.logLevel }}
+        - name: DATABASE_HOST
+          value: {{ .Values.config.databaseHost }}
+        - name: DATABASE_PORT
+          value: "{{ .Values.config.databasePort }}"
+        - name: DATABASE_NAME
+          value: {{ .Values.config.databaseName }}
+        - name: DATABASE_USER
+          value: {{ .Values.config.databaseUser }}
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "todo-app.fullname" . }}-secrets
+              key: postgresPassword
+        - name: DAPR_HTTP_PORT
+          value: "{{ .Values.config.daprHttpPort }}"
+        - name: DAPR_GRPC_PORT
+          value: "{{ .Values.config.daprGrpcPort }}"
+        - name: KAFKA_BROKERS
+          value: {{ .Values.config.kafkaBrokers }}
+        {{- if .Values.healthChecks.audit.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.healthChecks.audit.livenessProbe | nindent 10 }}
+        {{- end }}
+        {{- if .Values.healthChecks.audit.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.healthChecks.audit.readinessProbe | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources.audit | nindent 10 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "todo-app.fullname" . }}-config

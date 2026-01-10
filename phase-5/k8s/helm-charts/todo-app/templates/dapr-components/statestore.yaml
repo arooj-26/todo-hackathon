@@ -1,0 +1,49 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: {{ .Values.namespace | default "todo" }}
+spec:
+  type: state.postgresql
+  version: v1
+  metadata:
+    # Connection string from Kubernetes secret
+    - name: connectionString
+      secretKeyRef:
+        name: postgres-secret
+        key: connectionString
+
+    # Table name for state storage
+    - name: tableName
+      value: "dapr_state"
+
+    # Metadata table name
+    - name: metadataTableName
+      value: "dapr_state_metadata"
+
+    # Key prefix for multi-tenancy (optional)
+    - name: keyPrefix
+      value: "todo-app"
+
+    # Timeout for database operations (seconds)
+    - name: timeout
+      value: "20"
+
+    # Maximum number of retries
+    - name: maxRetries
+      value: "3"
+
+    # Enable optimistic concurrency (ETag support)
+    - name: actorStateStore
+      value: "true"
+
+---
+# Secret referenced above (created separately in deployment)
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: postgres-secret
+#   namespace: todo
+# type: Opaque
+# data:
+#   connectionString: <base64-encoded-connection-string>

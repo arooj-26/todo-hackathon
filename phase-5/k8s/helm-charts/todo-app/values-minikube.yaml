@@ -1,0 +1,200 @@
+# Minikube-specific values for local development
+# These values override the defaults in values.yaml
+
+# Global configuration for Minikube
+global:
+  namespace: todo-app
+  environment: development
+  imageRegistry: docker.io
+  imagePullPolicy: IfNotPresent
+
+# Dapr configuration for local development
+dapr:
+  enabled: true
+  sidecarImage: "daprio/daprd:1.12.0"
+  logLevel: debug  # More verbose logging for development
+  appProtocol: http
+
+# Database configuration for local PostgreSQL
+database:
+  host: postgres-service
+  port: 5432
+  name: todoapp
+  username: todoapp
+  password: todoapp-dev-password  # Simple password for local dev
+
+# Kafka configuration for local Strimzi
+kafka:
+  bootstrapServers: "kafka-cluster-kafka-bootstrap:9092"
+  topics:
+    taskEvents: task-events
+    reminders: reminders
+    taskUpdates: task-updates
+
+# Chat API Service - Minikube overrides
+chatApi:
+  name: chat-api
+  replicaCount: 1  # Single replica for local dev
+  image:
+    repository: todo-app/chat-api
+    tag: "latest"
+  service:
+    type: NodePort  # NodePort for local access
+    port: 8000
+    targetPort: 8000
+    nodePort: 30080  # Fixed NodePort for consistent access
+  resources:
+    requests:
+      cpu: 50m  # Lower resource requests for Minikube
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Recurring Tasks Service - Minikube overrides
+recurringTasks:
+  name: recurring-tasks
+  replicaCount: 1
+  image:
+    repository: todo-app/recurring-tasks
+    tag: "latest"
+  service:
+    type: NodePort
+    port: 8001
+    targetPort: 8001
+    nodePort: 30081
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Notification Service - Minikube overrides
+notifications:
+  name: notifications
+  replicaCount: 1
+  image:
+    repository: todo-app/notifications
+    tag: "latest"
+  service:
+    type: NodePort
+    port: 8002
+    targetPort: 8002
+    nodePort: 30082
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Audit Service - Minikube overrides
+audit:
+  name: audit
+  replicaCount: 1
+  image:
+    repository: todo-app/audit
+    tag: "latest"
+  service:
+    type: NodePort
+    port: 8003
+    targetPort: 8003
+    nodePort: 30083
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Frontend Service - Minikube overrides
+frontend:
+  name: frontend
+  replicaCount: 1
+  image:
+    repository: todo-app/frontend
+    tag: "latest"
+  service:
+    type: NodePort
+    port: 3000
+    targetPort: 3000
+    nodePort: 30000  # Access frontend at http://$(minikube ip):30000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  env:
+    - name: NEXT_PUBLIC_API_URL
+      value: "http://$(minikube ip):30080"  # Point to NodePort for Chat API
+    - name: NODE_ENV
+      value: "development"
+
+# Ingress disabled for Minikube (using NodePort instead)
+ingress:
+  enabled: false
+
+# HPA disabled for Minikube
+autoscaling:
+  enabled: false
+
+# PodDisruptionBudget disabled for Minikube (single replicas)
+podDisruptionBudget:
+  enabled: false
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  name: todo-app-sa
+
+# RBAC
+rbac:
+  create: true
+
+# NetworkPolicy disabled for simpler local networking
+networkPolicy:
+  enabled: false
+
+# JWT configuration for local dev
+jwt:
+  secretKey: "local-dev-secret-key-change-in-production"
+  algorithm: "HS256"
+  expiration: "86400"  # 24 hours for easier local testing
+
+# SMTP disabled for local development
+smtp:
+  host: ""
+  port: "587"
+  username: ""
+  password: ""
+  fromEmail: "dev@localhost"
+  useTLS: "false"
+
+# Additional Minikube-specific configurations
+minikube:
+  # PostgreSQL for local development
+  postgresql:
+    enabled: true
+    image: postgres:15-alpine
+    service:
+      type: ClusterIP
+      port: 5432
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    persistence:
+      enabled: false  # Use ephemeral storage for quick iterations
+
+  # Monitoring disabled by default for Minikube (can be enabled if needed)
+  monitoring:
+    enabled: false

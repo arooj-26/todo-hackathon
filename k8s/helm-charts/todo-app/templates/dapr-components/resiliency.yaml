@@ -1,0 +1,115 @@
+{{- if .Values.dapr.enabled }}
+apiVersion: dapr.io/v1alpha1
+kind: Resiliency
+metadata:
+  name: todo-app-resiliency
+  namespace: {{ .Release.Namespace }}
+spec:
+  policies:
+    # Timeout policies
+    timeouts:
+      general:
+        timeout: 5s
+      fast:
+        timeout: 2s
+      slow:
+        timeout: 30s
+
+    # Retry policies
+    retries:
+      # Default retry for most operations
+      retryForever:
+        policy: constant
+        duration: 1s
+        maxRetries: -1
+
+      # Exponential backoff for transient failures
+      exponentialBackoff:
+        policy: exponential
+        maxInterval: 30s
+        maxRetries: 10
+
+      # Fast retry for quick operations
+      fastRetry:
+        policy: constant
+        duration: 500ms
+        maxRetries: 3
+
+      # Pub/Sub retry policy
+      pubsubRetry:
+        policy: exponential
+        maxInterval: 60s
+        maxRetries: 3
+
+    # Circuit breaker policies
+    circuitBreakers:
+      # General circuit breaker
+      general:
+        maxRequests: 3
+        interval: 10s
+        timeout: 30s
+        trip: consecutiveFailures > 5
+
+      # Strict circuit breaker for critical paths
+      strict:
+        maxRequests: 1
+        interval: 5s
+        timeout: 60s
+        trip: consecutiveFailures > 3
+
+      # Lenient circuit breaker for non-critical operations
+      lenient:
+        maxRequests: 5
+        interval: 30s
+        timeout: 30s
+        trip: consecutiveFailures > 10
+
+  targets:
+    # Apply to all services
+    apps:
+      chat-api:
+        timeout: general
+        retry: exponentialBackoff
+        circuitBreaker: general
+
+      recurring-tasks:
+        timeout: general
+        retry: exponentialBackoff
+        circuitBreaker: general
+
+      notifications:
+        timeout: general
+        retry: exponentialBackoff
+        circuitBreaker: general
+
+      audit:
+        timeout: fast
+        retry: fastRetry
+        circuitBreaker: lenient
+
+    # Apply to Dapr components
+    components:
+      # State store resiliency
+      statestore:
+        outbound:
+          timeout: general
+          retry: exponentialBackoff
+          circuitBreaker: strict
+
+      # Pub/Sub resiliency
+      kafka-pubsub:
+        outbound:
+          timeout: slow
+          retry: pubsubRetry
+          circuitBreaker: general
+        inbound:
+          timeout: slow
+          retry: pubsubRetry
+          circuitBreaker: lenient
+
+    # Apply to actors
+    actors:
+      timeout: general
+      retry: exponentialBackoff
+      circuitBreaker: strict
+{{- end }}

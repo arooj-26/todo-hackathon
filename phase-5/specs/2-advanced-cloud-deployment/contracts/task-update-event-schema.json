@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://todo-chatbot.example.com/schemas/task-update-event/v1.0.json",
+  "title": "TaskUpdateEvent",
+  "description": "Lightweight event for real-time UI updates when tasks change",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_type",
+    "task_id",
+    "user_id",
+    "timestamp",
+    "correlation_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Schema version for backward compatibility"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["task_created", "task_updated", "task_completed", "task_deleted"],
+      "description": "Type of task update event"
+    },
+    "task_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Task identifier that was updated"
+    },
+    "user_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "User who owns the task"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp in ISO 8601 UTC format"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Correlation ID for distributed tracing"
+    },
+    "changed_fields": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "title",
+          "description",
+          "status",
+          "priority",
+          "due_at",
+          "completed_at",
+          "tags"
+        ]
+      },
+      "description": "List of fields that changed (for task_updated events)"
+    },
+    "new_status": {
+      "type": ["string", "null"],
+      "enum": ["todo", "in_progress", "completed", null],
+      "description": "New status if status changed"
+    },
+    "new_priority": {
+      "type": ["string", "null"],
+      "enum": ["high", "medium", "low", null],
+      "description": "New priority if priority changed"
+    },
+    "next_task_id": {
+      "type": ["integer", "null"],
+      "description": "ID of next recurring task if event_type is task_completed and task is recurring"
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "event_type": "task_created",
+      "task_id": 1005,
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2026-01-05T11:00:00.123Z",
+      "correlation_id": "e5f6g7h8-i9j0-1234-efgh-i45678901234",
+      "changed_fields": [],
+      "new_status": null,
+      "new_priority": null,
+      "next_task_id": null
+    },
+    {
+      "schema_version": "1.0",
+      "event_type": "task_updated",
+      "task_id": 1006,
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2026-01-05T12:30:00.456Z",
+      "correlation_id": "f6g7h8i9-j0k1-2345-fghi-j56789012345",
+      "changed_fields": ["status", "priority"],
+      "new_status": "in_progress",
+      "new_priority": "high",
+      "next_task_id": null
+    },
+    {
+      "schema_version": "1.0",
+      "event_type": "task_completed",
+      "task_id": 1007,
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2026-01-06T10:15:00.789Z",
+      "correlation_id": "g7h8i9j0-k1l2-3456-ghij-k67890123456",
+      "changed_fields": ["status", "completed_at"],
+      "new_status": "completed",
+      "new_priority": null,
+      "next_task_id": 1008
+    },
+    {
+      "schema_version": "1.0",
+      "event_type": "task_deleted",
+      "task_id": 1009,
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2026-01-05T14:00:00.012Z",
+      "correlation_id": "h8i9j0k1-l2m3-4567-hijk-l78901234567",
+      "changed_fields": [],
+      "new_status": null,
+      "new_priority": null,
+      "next_task_id": null
+    }
+  ]
+}

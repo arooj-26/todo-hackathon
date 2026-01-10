@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.recurringTasks.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.recurringTasks.name }}
+    component: backend
+    tier: worker
+spec:
+  type: {{ .Values.recurringTasks.service.type }}
+  ports:
+    - port: {{ .Values.recurringTasks.service.port }}
+      targetPort: {{ .Values.recurringTasks.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.recurringTasks.name }}
+  sessionAffinity: None

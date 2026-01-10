@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.notifications.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.notifications.name }}
+    component: backend
+    tier: worker
+spec:
+  replicas: {{ .Values.notifications.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.notifications.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.notifications.name }}
+        component: backend
+        tier: worker
+      annotations:
+        {{- if .Values.dapr.enabled }}
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "{{ .Values.notifications.name }}"
+        dapr.io/app-port: "{{ .Values.notifications.service.targetPort }}"
+        dapr.io/app-protocol: "{{ .Values.dapr.appProtocol }}"
+        dapr.io/log-level: "{{ .Values.dapr.logLevel }}"
+        dapr.io/sidecar-cpu-limit: "200m"
+        dapr.io/sidecar-memory-limit: "256Mi"
+        dapr.io/sidecar-cpu-request: "100m"
+        dapr.io/sidecar-memory-request: "128Mi"
+        dapr.io/enable-metrics: "true"
+        dapr.io/metrics-port: "9090"
+        {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+      - name: {{ .Values.notifications.name }}
+        image: "{{ .Values.global.imageRegistry }}/{{ .Values.notifications.image.repository }}:{{ .Values.notifications.image.tag }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.notifications.service.targetPort }}
+          protocol: TCP
+        env:
+        {{- range .Values.notifications.env }}
+        - name: {{ .name }}
+          {{- if .value }}
+          value: {{ .value | quote }}
+          {{- else if .valueFrom }}
+          valueFrom:
+            {{- toYaml .valueFrom | nindent 12 }}
+          {{- end }}
+        {{- end }}
+        - name: DAPR_HTTP_PORT
+          value: "3500"
+        - name: DAPR_GRPC_PORT
+          value: "50001"
+        livenessProbe:
+          {{- toYaml .Values.notifications.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.notifications.readinessProbe | nindent 10 }}
+        resources:
+          {{- toYaml .Values.notifications.resources | nindent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        fsGroup: 1000

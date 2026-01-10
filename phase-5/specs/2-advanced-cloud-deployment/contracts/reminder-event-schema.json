@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://todo-chatbot.example.com/schemas/reminder-event/v1.0.json",
+  "title": "ReminderEvent",
+  "description": "Event published when a reminder is due to be sent to the user",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_type",
+    "reminder_id",
+    "task_id",
+    "user_id",
+    "timestamp",
+    "correlation_id",
+    "due_at",
+    "task_title"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Schema version for backward compatibility"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["reminder_due", "reminder_sent", "reminder_failed"],
+      "description": "Type of reminder event"
+    },
+    "reminder_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Unique reminder identifier"
+    },
+    "task_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Associated task identifier"
+    },
+    "user_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "User to receive the reminder"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp in ISO 8601 UTC format"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Correlation ID for distributed tracing"
+    },
+    "due_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the task is due (ISO 8601 UTC)"
+    },
+    "remind_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the reminder should be sent (ISO 8601 UTC)"
+    },
+    "task_title": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Task title for the reminder message"
+    },
+    "task_description": {
+      "type": ["string", "null"],
+      "maxLength": 2000,
+      "description": "Optional task description"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Task priority level"
+    },
+    "notification_channel": {
+      "type": "string",
+      "enum": ["in_app", "email", "sms"],
+      "default": "in_app",
+      "description": "Channel for reminder delivery"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Number of delivery retry attempts"
+    },
+    "error_message": {
+      "type": ["string", "null"],
+      "description": "Error message if event_type is reminder_failed"
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "event_type": "reminder_due",
+      "reminder_id": 501,
+      "task_id": 1003,
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2026-01-09T16:00:00.000Z",
+      "correlation_id": "c3d4e5f6-g7h8-9012-cdef-g23456789012",
+      "due_at": "2026-01-10T17:00:00Z",
+      "remind_at": "2026-01-09T16:00:00Z",
+      "task_title": "Submit Q4 report",
+      "task_description": "Financial report for Q4 2025",
+      "priority": "high",
+      "notification_channel": "in_app",
+      "retry_count": 0,
+      "error_message": null
+    },
+    {
+      "schema_version": "1.0",
+      "event_type": "reminder_sent",
+      "reminder_id": 502,
+      "task_id": 1004,
+      "user_id": "660e8400-e29b-41d4-a716-446655440001",
+      "timestamp": "2026-01-08T09:00:00.123Z",
+      "correlation_id": "d4e5f6g7-h8i9-0123-defg-h34567890123",
+      "due_at": "2026-01-08T10:00:00Z",
+      "remind_at": "2026-01-08T09:00:00Z",
+      "task_title": "Morning standup",
+      "task_description": null,
+      "priority": "medium",
+      "notification_channel": "in_app",
+      "retry_count": 0,
+      "error_message": null
+    }
+  ]
+}

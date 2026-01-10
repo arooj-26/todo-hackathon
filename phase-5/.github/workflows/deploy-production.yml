@@ -1,0 +1,400 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Docker image version to deploy (e.g., git SHA or tag)'
+        required: true
+      skip_health_checks:
+        description: 'Skip health checks (use with caution)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NAMESPACE: todo-app-production
+  HELM_RELEASE: todo-app-production
+  CLUSTER_NAME: todo-app-production-cluster
+  HEALTH_CHECK_THRESHOLD: 0.8  # 80% of pods must be healthy
+
+jobs:
+  deploy-production:
+    name: Deploy to Production Environment
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://todoapp.example.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.13.0'
+
+      # Azure AKS Authentication
+      - name: Azure Login
+        if: ${{ vars.CLOUD_PROVIDER == 'azure' }}
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set AKS Context
+        if: ${{ vars.CLOUD_PROVIDER == 'azure' }}
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          cluster-name: ${{ env.CLUSTER_NAME }}
+
+      # Google GKE Authentication
+      - name: Authenticate to Google Cloud
+        if: ${{ vars.CLOUD_PROVIDER == 'gcp' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set GKE Context
+        if: ${{ vars.CLOUD_PROVIDER == 'gcp' }}
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ secrets.GCP_REGION }}
+
+      # Oracle OKE Authentication
+      - name: Set OKE Context
+        if: ${{ vars.CLOUD_PROVIDER == 'oracle' }}
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify cluster connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Validate namespace exists
+        run: |
+          if ! kubectl get namespace ${{ env.NAMESPACE }} > /dev/null 2>&1; then
+            echo "ERROR: Production namespace does not exist!"
+            exit 1
+          fi
+
+      - name: Get current deployment info
+        id: current_deployment
+        run: |
+          CURRENT_REVISION=$(helm list -n ${{ env.NAMESPACE }} -o json | jq -r '.[] | select(.name=="${{ env.HELM_RELEASE }}") | .revision')
+          echo "revision=${CURRENT_REVISION}" >> $GITHUB_OUTPUT
+          echo "Current Helm revision: ${CURRENT_REVISION}"
+
+      - name: Pre-deployment backup
+        run: |
+          echo "Creating pre-deployment backup..."
+          kubectl get all -n ${{ env.NAMESPACE }} -o yaml > pre-deployment-backup.yaml
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-deployment-backup-${{ github.run_id }}
+          path: pre-deployment-backup.yaml
+          retention-days: 30
+
+      - name: Create database secret
+        run: |
+          kubectl create secret generic postgres-secret \
+            --from-literal=connection-string="${{ secrets.PRODUCTION_DATABASE_URL }}" \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create JWT secret
+        run: |
+          kubectl create secret generic jwt-secret \
+            --from-literal=jwt-secret-key="${{ secrets.PRODUCTION_JWT_SECRET }}" \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create SMTP secret
+        run: |
+          kubectl create secret generic smtp-secret \
+            --from-literal=smtp-host="${{ secrets.SMTP_HOST }}" \
+            --from-literal=smtp-port="${{ secrets.SMTP_PORT }}" \
+            --from-literal=smtp-username="${{ secrets.SMTP_USERNAME }}" \
+            --from-literal=smtp-password="${{ secrets.SMTP_PASSWORD }}" \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy with Helm (Rolling Update)
+        id: helm_deploy
+        run: |
+          helm upgrade --install ${{ env.HELM_RELEASE }} ./k8s/helm-charts/todo-app \
+            --namespace ${{ env.NAMESPACE }} \
+            --values ./k8s/helm-charts/todo-app/values-cloud.yaml \
+            --set global.environment=production \
+            --set global.imageRegistry=${{ secrets.DOCKER_REGISTRY }} \
+            --set chatApi.image.tag=${{ github.event.inputs.version }} \
+            --set recurringTasks.image.tag=${{ github.event.inputs.version }} \
+            --set notifications.image.tag=${{ github.event.inputs.version }} \
+            --set audit.image.tag=${{ github.event.inputs.version }} \
+            --set frontend.image.tag=${{ github.event.inputs.version }} \
+            --set ingress.hosts[0].host=todoapp.example.com \
+            --set ingress.hosts[1].host=api.todoapp.example.com \
+            --set autoscaling.enabled=true \
+            --set autoscaling.minReplicas=3 \
+            --set autoscaling.maxReplicas=10 \
+            --set resources.requests.cpu=500m \
+            --set resources.requests.memory=512Mi \
+            --set resources.limits.cpu=2000m \
+            --set resources.limits.memory=2Gi \
+            --wait \
+            --timeout 15m
+        continue-on-error: true
+
+      - name: Check deployment result
+        id: deployment_status
+        run: |
+          if [ "${{ steps.helm_deploy.outcome }}" == "failure" ]; then
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "Helm deployment failed!"
+            exit 1
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Wait for pods to be ready
+        if: steps.deployment_status.outputs.status == 'success'
+        run: |
+          echo "Waiting for pods to be ready..."
+          kubectl wait --for=condition=ready pod \
+            -l "app in (chat-api,recurring-tasks,notifications,audit,frontend)" \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=600s
+        continue-on-error: true
+
+      - name: Verify deployment health
+        if: steps.deployment_status.outputs.status == 'success' && github.event.inputs.skip_health_checks != 'true'
+        id: health_check
+        run: |
+          echo "Running comprehensive health checks..."
+
+          # Check pod health
+          TOTAL_PODS=$(kubectl get pods -n ${{ env.NAMESPACE }} -l "app in (chat-api,recurring-tasks,notifications,audit,frontend)" --no-headers | wc -l)
+          READY_PODS=$(kubectl get pods -n ${{ env.NAMESPACE }} -l "app in (chat-api,recurring-tasks,notifications,audit,frontend)" --no-headers | grep -c "Running" || true)
+
+          echo "Total pods: ${TOTAL_PODS}"
+          echo "Ready pods: ${READY_PODS}"
+
+          HEALTH_PERCENTAGE=$(echo "scale=2; ${READY_PODS} / ${TOTAL_PODS}" | bc)
+          echo "Health percentage: ${HEALTH_PERCENTAGE}"
+
+          THRESHOLD=${{ env.HEALTH_CHECK_THRESHOLD }}
+          if (( $(echo "${HEALTH_PERCENTAGE} < ${THRESHOLD}" | bc -l) )); then
+            echo "health_status=failed" >> $GITHUB_OUTPUT
+            echo "ERROR: Only ${HEALTH_PERCENTAGE}% of pods are healthy (threshold: ${THRESHOLD})"
+            exit 1
+          fi
+
+          # Chat API health check
+          echo "Testing Chat API health endpoint..."
+          kubectl run healthcheck-chat-api-${{ github.run_id }} \
+            --image=curlimages/curl:latest \
+            --restart=Never \
+            --namespace=${{ env.NAMESPACE }} \
+            --rm -i --quiet -- \
+            curl -f -s --max-time 5 http://chat-api:8000/health || {
+              echo "health_status=failed" >> $GITHUB_OUTPUT
+              echo "ERROR: Chat API health check failed"
+              exit 1
+            }
+
+          # Frontend health check
+          echo "Testing Frontend health..."
+          kubectl run healthcheck-frontend-${{ github.run_id }} \
+            --image=curlimages/curl:latest \
+            --restart=Never \
+            --namespace=${{ env.NAMESPACE }} \
+            --rm -i --quiet -- \
+            curl -f -s --max-time 5 http://frontend:3000 || {
+              echo "health_status=failed" >> $GITHUB_OUTPUT
+              echo "ERROR: Frontend health check failed"
+              exit 1
+            }
+
+          echo "health_status=passed" >> $GITHUB_OUTPUT
+          echo "All health checks passed!"
+        continue-on-error: true
+
+      - name: Get deployment status
+        if: steps.deployment_status.outputs.status == 'success'
+        run: |
+          echo "### Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** ${{ github.event.inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Namespace:** ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Health Check Status:** ${{ steps.health_check.outputs.health_status || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Pod Status" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n ${{ env.NAMESPACE }} -o wide >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Service Endpoints" >> $GITHUB_STEP_SUMMARY
+          kubectl get ingress -n ${{ env.NAMESPACE }} >> $GITHUB_STEP_SUMMARY
+
+      - name: Run production smoke tests
+        if: steps.deployment_status.outputs.status == 'success' && steps.health_check.outputs.health_status == 'passed'
+        run: |
+          echo "Running production smoke tests..."
+          # Example: Test critical API endpoints
+          # kubectl run smoke-test-${{ github.run_id }} \
+          #   --image=curlimages/curl:latest \
+          #   --restart=Never \
+          #   --namespace=${{ env.NAMESPACE }} \
+          #   --rm -i --quiet -- \
+          #   curl -f -s https://api.todoapp.example.com/health
+        continue-on-error: true
+
+      - name: Notify success
+        if: steps.deployment_status.outputs.status == 'success' && steps.health_check.outputs.health_status == 'passed'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Production deployment successful! :rocket:",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Production Deployment Successful* :white_check_mark:\n*Environment:* Production\n*Image Tag:* ${{ github.event.inputs.version }}\n*Deployed by:* ${{ github.actor }}\n*Deployed at:* $(date -u +"%Y-%m-%d %H:%M:%S UTC")\n*Previous Revision:* ${{ steps.current_deployment.outputs.revision }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Production"
+                      },
+                      "url": "https://todoapp.example.com",
+                      "style": "primary"
+                    },
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Monitoring"
+                      },
+                      "url": "https://grafana.todoapp.example.com"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+      - name: Automatic rollback on health check failure
+        if: steps.health_check.outputs.health_status == 'failed' || steps.deployment_status.outputs.status == 'failed'
+        run: |
+          echo "CRITICAL: Health checks failed or deployment failed! Initiating automatic rollback..."
+
+          if [ -n "${{ steps.current_deployment.outputs.revision }}" ]; then
+            echo "Rolling back to revision ${{ steps.current_deployment.outputs.revision }}..."
+            helm rollback ${{ env.HELM_RELEASE }} ${{ steps.current_deployment.outputs.revision }} \
+              -n ${{ env.NAMESPACE }} \
+              --wait \
+              --timeout 5m
+
+            echo "Rollback completed. Verifying pods..."
+            kubectl wait --for=condition=ready pod \
+              -l "app in (chat-api,recurring-tasks,notifications,audit,frontend)" \
+              -n ${{ env.NAMESPACE }} \
+              --timeout=300s
+
+            echo "Rollback successful!"
+          else
+            echo "WARNING: No previous revision found. Manual intervention required!"
+            exit 1
+          fi
+
+      - name: Notify failure and rollback
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Production deployment failed! Automatic rollback initiated! :warning:",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Production Deployment Failed* :x:\n*Environment:* Production\n*Image Tag:* ${{ github.event.inputs.version }}\n*Deployed by:* ${{ github.actor }}\n*Health Check Status:* ${{ steps.health_check.outputs.health_status || 'deployment_failed' }}\n\n*Action:* Automatically rolled back to revision ${{ steps.current_deployment.outputs.revision }}\n\n*URGENT:* Manual verification required!"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Logs"
+                      },
+                      "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                      "style": "danger"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+      - name: Create incident ticket (on failure)
+        if: failure()
+        run: |
+          echo "Creating incident ticket for failed production deployment..."
+          # Add your incident management integration here
+          # Example: Create PagerDuty incident, Jira ticket, etc.
+        continue-on-error: true
+
+  post-deployment-validation:
+    name: Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: success()
+
+    steps:
+      - name: Wait for stabilization
+        run: |
+          echo "Waiting 2 minutes for system to stabilize..."
+          sleep 120
+
+      - name: Monitor error rates
+        run: |
+          echo "Monitoring error rates for 5 minutes..."
+          # Add monitoring checks here
+          # Example: Query Prometheus for error rates
+          # If error rate > threshold, trigger rollback
+        continue-on-error: true
+
+      - name: Generate deployment report
+        run: |
+          echo "### Post-Deployment Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** Monitoring in progress" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Check:** $(date -u -d '+5 minutes' +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
