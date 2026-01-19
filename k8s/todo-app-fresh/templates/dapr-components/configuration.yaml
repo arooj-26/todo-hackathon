@@ -1,0 +1,86 @@
+{{- if .Values.dapr.enabled }}
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: todo-app-config
+  namespace: {{ .Release.Namespace }}
+spec:
+  # Tracing configuration
+  tracing:
+    samplingRate: "1"
+    zipkin:
+      endpointAddress: "http://zipkin.monitoring.svc.cluster.local:9411/api/v2/spans"
+
+  # Metrics configuration
+  metric:
+    enabled: true
+
+  # Middleware configuration
+  httpPipeline:
+    handlers:
+      - name: oauth2
+        type: middleware.http.oauth2
+      - name: ratelimit
+        type: middleware.http.ratelimit
+
+  # Access control
+  accessControl:
+    defaultAction: allow
+    trustDomain: "public"
+    policies:
+      - appId: chat-api
+        defaultAction: allow
+        trustDomain: "public"
+        operations:
+          - name: /api/*
+            httpVerb: ['*']
+            action: allow
+
+      - appId: recurring-tasks
+        defaultAction: allow
+        operations:
+          - name: /*
+            action: allow
+
+      - appId: notifications
+        defaultAction: allow
+        operations:
+          - name: /*
+            action: allow
+
+      - appId: audit
+        defaultAction: allow
+        operations:
+          - name: /*
+            action: allow
+
+  # Secrets configuration
+  secrets:
+    scopes:
+      - storeName: kubernetes-secrets
+        defaultAccess: allow
+
+  # Component deny lists
+  components:
+    deny:
+      - statestore-redis  # Example: deny unused components
+
+  # Name resolution
+  nameResolution:
+    component: "kubernetes"
+    configuration:
+      clusterDomain: "cluster.local"
+
+  # Features
+  features:
+    - name: Actor.Reentrancy
+      enabled: true
+    - name: Actor.TypeMetadata
+      enabled: true
+
+  # Logging
+  logging:
+    apiLogging:
+      enabled: true
+      obfuscateURLs: false
+{{- end }}

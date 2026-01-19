@@ -14,12 +14,22 @@ httpx==0.25.2
 
 # Data validation
 pydantic==2.5.2
+email-validator==2.1.0
+
+# JWT Authentication
+python-jose[cryptography]==3.3.0
+
+# Password hashing
+passlib[bcrypt]==1.7.4
 
 # Date/time handling for recurrence
 python-dateutil==2.8.2
 
 # Structured logging
 structlog==23.3.0
+
+# Prometheus metrics
+prometheus-client==0.19.0
 
 # Environment variables
 python-dotenv==1.0.0

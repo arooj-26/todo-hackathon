@@ -7,12 +7,16 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # Import all models so Alembic can detect schema changes
+# These imports must happen before SQLModel.metadata is accessed
 from src.models.user import User
 from src.models.task import Task
 from src.models.recurrence import RecurrencePattern
 from src.models.tag import Tag, TaskTag
 from src.models.reminder import Reminder
 # from src.models.audit_log import AuditLog  # In audit service
+
+# Import SQLModel for metadata
+from sqlmodel import SQLModel
 
 # This is the Alembic Config object
 config = context.config
@@ -24,11 +28,13 @@ if config.config_file_name is not None:
 # Get database URL from environment variable (overrides alembic.ini)
 database_url = os.getenv("DATABASE_URL")
 if database_url:
+    # Replace asyncpg with psycopg2 for Alembic (synchronous)
+    database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
     config.set_main_option("sqlalchemy.url", database_url)
 
-# Add your model's MetaData object here for 'autogenerate' support
-from sqlalchemy.orm import declarative_base
-target_metadata = declarative_base().metadata
+# Use SQLModel metadata for autogenerate support
+# This includes all tables defined with SQLModel
+target_metadata = SQLModel.metadata
 
 
 def run_migrations_offline() -> None:

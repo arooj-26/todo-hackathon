@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-frontend
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app: todo-frontend
+spec:
+  replicas: {{ .Values.replicas.todoFrontend }}
+  selector:
+    matchLabels:
+      app: todo-frontend
+  template:
+    metadata:
+      labels:
+        app: todo-frontend
+        {{- include "todo-app.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: todo-frontend
+          image: "{{ .Values.images.todoFrontend.repository }}:{{ .Values.images.todoFrontend.tag }}"
+          imagePullPolicy: {{ .Values.images.todoFrontend.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: TODO_API_URL
+          resources:
+            requests:
+              cpu: {{ .Values.resources.todoFrontend.requests.cpu }}
+              memory: {{ .Values.resources.todoFrontend.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.todoFrontend.limits.cpu }}
+              memory: {{ .Values.resources.todoFrontend.limits.memory }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3

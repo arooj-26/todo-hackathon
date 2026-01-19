@@ -1,0 +1,140 @@
+---
+# Kafka Pub/Sub Component
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kafka-pubsub
+  namespace: todo-app
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    value: "kafka:9092"
+  - name: consumerGroup
+    value: "todo-app-group"
+  - name: authType
+    value: "none"
+  - name: maxMessageBytes
+    value: "1024"
+  - name: consumeRetryInterval
+    value: "200ms"
+scopes:
+  - chat-api
+  - recurring-tasks
+  - notifications
+  - audit
+---
+# PostgreSQL State Store Component
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: todo-app
+spec:
+  type: state.postgresql
+  version: v1
+  metadata:
+  - name: connectionString
+    value: "host=postgres user=postgres password=postgres port=5432 connect_timeout=10 database=todo_chatbot"
+  - name: tableName
+    value: "dapr_state"
+  - name: metadataTableName
+    value: "dapr_metadata"
+  - name: cleanupIntervalInSeconds
+    value: "3600"
+scopes:
+  - chat-api
+  - recurring-tasks
+  - notifications
+---
+# Kubernetes Secrets Component
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kubernetes-secret-store
+  namespace: todo-app
+spec:
+  type: secretstores.kubernetes
+  version: v1
+  metadata:
+  - name: defaultNamespace
+    value: "todo-app"
+scopes:
+  - chat-api
+  - recurring-tasks
+  - notifications
+  - audit
+---
+# Resiliency Configuration
+apiVersion: dapr.io/v1alpha1
+kind: Resiliency
+metadata:
+  name: app-resiliency
+  namespace: todo-app
+spec:
+  policies:
+    retries:
+      DefaultRetryPolicy:
+        policy: constant
+        duration: 100ms
+        maxRetries: 3
+      KafkaRetryPolicy:
+        policy: exponential
+        maxInterval: 15s
+        maxRetries: 5
+    timeouts:
+      DefaultTimeoutPolicy: 5s
+      KafkaTimeoutPolicy: 30s
+    circuitBreakers:
+      DefaultCircuitBreakerPolicy:
+        maxRequests: 1
+        timeout: 30s
+        trip: consecutiveFailures >= 5
+  targets:
+    apps:
+      chat-api:
+        retry: DefaultRetryPolicy
+        timeout: DefaultTimeoutPolicy
+        circuitBreaker: DefaultCircuitBreakerPolicy
+      recurring-tasks:
+        retry: KafkaRetryPolicy
+        timeout: KafkaTimeoutPolicy
+      notifications:
+        retry: KafkaRetryPolicy
+        timeout: KafkaTimeoutPolicy
+    components:
+      kafka-pubsub:
+        outbound:
+          retry: KafkaRetryPolicy
+          timeout: KafkaTimeoutPolicy
+          circuitBreaker: DefaultCircuitBreakerPolicy
+      statestore:
+        outbound:
+          retry: DefaultRetryPolicy
+          timeout: DefaultTimeoutPolicy
+---
+# Configuration for Dapr Tracing and Metrics
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: dapr-config
+  namespace: todo-app
+spec:
+  tracing:
+    samplingRate: "1"
+    zipkin:
+      endpointAddress: "http://zipkin.default.svc.cluster.local:9411/api/v2/spans"
+  metric:
+    enabled: true
+  mtls:
+    enabled: true
+    workloadCertTTL: "24h"
+    allowedClockSkew: "15m"
+  features:
+    - name: ServiceInvocation
+      enabled: true
+    - name: PubSub
+      enabled: true
+    - name: StateManagement
+      enabled: true

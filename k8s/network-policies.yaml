@@ -1,0 +1,400 @@
+# Kubernetes Network Policies for Todo Application
+# These policies implement network segmentation and least-privilege access
+
+---
+# Default deny all ingress traffic
+# Explicit allow rules will override this
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: todo-app
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+# PostgreSQL Network Policy
+# Allow access only from services that need database access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-netpol
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow from Chat API
+  - from:
+    - podSelector:
+        matchLabels:
+          app: chat-api
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow from Audit Service
+  - from:
+    - podSelector:
+        matchLabels:
+          app: audit
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow from Todo App Backend (Phase-4)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: todo-app-backend
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow from Chatbot Backend
+  - from:
+    - podSelector:
+        matchLabels:
+          app: chatbot-backend
+    ports:
+    - protocol: TCP
+      port: 5432
+
+---
+# Kafka Network Policy
+# Allow access from services that publish/subscribe to events
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-netpol
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: kafka
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow from Chat API (publisher)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: chat-api
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow from Recurring Tasks (subscriber)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: recurring-tasks
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow from Notifications (subscriber)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: notifications
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow from Audit (subscriber)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: audit
+    ports:
+    - protocol: TCP
+      port: 9092
+
+---
+# Chat API Network Policy
+# Allow ingress from frontend and internal services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chat-api-netpol
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: chat-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from Frontend
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow from Recurring Tasks (Dapr service invocation)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: recurring-tasks
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 3500  # Dapr sidecar
+  # Allow external traffic (NodePort)
+  - ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 3500  # Dapr sidecar
+  egress:
+  # Allow to PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow to Kafka
+  - to:
+    - podSelector:
+        matchLabels:
+          app: kafka
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow to Notifications (Dapr service invocation)
+  - to:
+    - podSelector:
+        matchLabels:
+          app: notifications
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 3500
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# Frontend Network Policy
+# Allow ingress from external and egress to Chat API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-netpol
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow external traffic (NodePort)
+  - ports:
+    - protocol: TCP
+      port: 3000
+    - protocol: TCP
+      port: 3500  # Dapr sidecar
+  egress:
+  # Allow to Chat API
+  - to:
+    - podSelector:
+        matchLabels:
+          app: chat-api
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow to Chatbot Backend
+  - to:
+    - podSelector:
+        matchLabels:
+          app: chatbot-backend
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow HTTPS for external APIs (if needed)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# Recurring Tasks Network Policy
+# Allow Dapr pub/sub and service invocation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: recurring-tasks-netpol
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: recurring-tasks
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow Dapr sidecar traffic
+  - ports:
+    - protocol: TCP
+      port: 8001
+    - protocol: TCP
+      port: 3500  # Dapr sidecar
+  egress:
+  # Allow to Kafka
+  - to:
+    - podSelector:
+        matchLabels:
+          app: kafka
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow to Chat API (Dapr service invocation)
+  - to:
+    - podSelector:
+        matchLabels:
+          app: chat-api
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 3500
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+# Notifications Network Policy
+# Allow Dapr Jobs callbacks and pub/sub
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: notifications-netpol
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: notifications
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from Chat API (Dapr Jobs scheduling)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: chat-api
+    ports:
+    - protocol: TCP
+      port: 8002
+    - protocol: TCP
+      port: 3500  # Dapr sidecar
+  # Allow Dapr sidecar traffic
+  - ports:
+    - protocol: TCP
+      port: 8002
+    - protocol: TCP
+      port: 3500
+  egress:
+  # Allow to Kafka
+  - to:
+    - podSelector:
+        matchLabels:
+          app: kafka
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow SMTP for email notifications (if configured)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 587  # SMTP
+    - protocol: TCP
+      port: 465  # SMTPS
+
+---
+# Audit Network Policy
+# Allow Dapr pub/sub for event consumption
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: audit-netpol
+  namespace: todo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: audit
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow Dapr sidecar traffic
+  - ports:
+    - protocol: TCP
+      port: 8003
+  egress:
+  # Allow to PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow to Kafka
+  - to:
+    - podSelector:
+        matchLabels:
+          app: kafka
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app: postgresql
+spec:
+  type: {{ .Values.services.postgres.type }}
+  ports:
+    - port: {{ .Values.services.postgres.port }}
+      targetPort: {{ .Values.services.postgres.targetPort }}
+      protocol: TCP
+      name: postgres
+  selector:
+    app: postgresql

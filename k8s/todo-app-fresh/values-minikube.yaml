@@ -1,0 +1,230 @@
+# Minikube-specific overrides for local development
+# Usage: helm install todo-app ./todo-app -f values-minikube.yaml
+
+global:
+  environment: development
+  imageRegistry: ""
+
+# Dapr configuration for local development
+dapr:
+  enabled: true
+  appProtocol: http
+  logLevel: debug
+  enableProfiling: true
+  sidecar:
+    image:
+      registry: daprio
+      name: daprd
+      tag: 1.12.0
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+# Use local images with Never pull policy
+images:
+  chatApi:
+    repository: phase-5-chat-api
+    tag: latest
+    pullPolicy: Never
+  recurringTasks:
+    repository: phase-5-recurring-tasks
+    tag: latest
+    pullPolicy: Never
+  notifications:
+    repository: phase-5-notifications
+    tag: latest
+    pullPolicy: Never
+  audit:
+    repository: phase-5-audit
+    tag: latest
+    pullPolicy: Never
+  frontend:
+    repository: phase-5-frontend
+    tag: latest
+    pullPolicy: Never
+  postgres:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+
+# Reduced replicas for local development
+replicas:
+  chatApi: 1
+  recurringTasks: 1
+  notifications: 1
+  audit: 1
+  frontend: 1
+  postgres: 1
+
+# Use NodePort for frontend to access from host
+services:
+  chatApi:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  recurringTasks:
+    type: ClusterIP
+    port: 8001
+    targetPort: 8001
+  notifications:
+    type: ClusterIP
+    port: 8002
+    targetPort: 8002
+  audit:
+    type: ClusterIP
+    port: 8003
+    targetPort: 8003
+  frontend:
+    type: NodePort
+    port: 3000
+    targetPort: 3000
+    nodePort: 30000
+  postgres:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+
+# Reduced resource limits for local development
+resources:
+  chatApi:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  recurringTasks:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  notifications:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  audit:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  frontend:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  postgres:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+# Application configuration
+config:
+  # Database
+  databaseHost: todo-app-postgresql
+  databasePort: "5432"
+  databaseName: todoapp
+  databaseUser: todouser
+
+  # Service URLs (internal cluster addresses)
+  chatApiUrl: http://todo-app-chat-api:8000
+  recurringTasksUrl: http://todo-app-recurring-tasks:8001
+  notificationsUrl: http://todo-app-notifications:8002
+  auditUrl: http://todo-app-audit:8003
+  frontendUrl: http://todo-app-frontend:3000
+
+  # Dapr
+  daprHttpPort: "3500"
+  daprGrpcPort: "50001"
+  daprPlacementHost: "dapr-placement-server.dapr-system.svc.cluster.local:50006"
+
+  # Kafka (assuming Strimzi deployment in kafka namespace)
+  kafkaBrokers: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  kafkaTopics:
+    taskEvents: "task-events"
+    reminders: "reminders"
+    taskUpdates: "task-updates"
+
+  # Application settings
+  environment: development
+  logLevel: DEBUG
+  corsOrigins: "*"
+
+  # Feature flags
+  features:
+    recurringTasks: true
+    reminders: true
+    tags: true
+    search: true
+    audit: true
+
+# Secrets (for local development only - change these!)
+secrets:
+  # Database
+  postgresPassword: "devpassword123"
+  databaseUrl: ""  # Will be auto-constructed
+
+  # Application
+  jwtSecret: "dev-jwt-secret-key-change-me"
+  secretKey: "dev-secret-key-change-me"
+
+  # External services (optional - leave empty for local dev)
+  openaiApiKey: ""
+  sendgridApiKey: ""
+  twilioAccountSid: ""
+  twilioAuthToken: ""
+
+# Storage configuration for Minikube
+storage:
+  postgres:
+    enabled: true
+    size: 5Gi
+    storageClass: standard
+    accessMode: ReadWriteOnce
+
+# Disable autoscaling for local development
+autoscaling:
+  enabled: false
+
+# Disable PodDisruptionBudget for single-replica services
+podDisruptionBudget:
+  enabled: false
+
+# Disable ingress for local development (use NodePort instead)
+ingress:
+  enabled: false
+
+# Disable monitoring for local development (enable separately if needed)
+monitoring:
+  enabled: false
+
+# Kafka configuration (assuming separate Strimzi installation)
+kafka:
+  enabled: false  # Deploy Kafka separately using Strimzi
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    username: todouser
+    database: todoapp
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: standard

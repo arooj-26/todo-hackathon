@@ -1,15 +1,16 @@
 """Task API endpoints with recurrence pattern support."""
 
 from typing import Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth.middleware import get_current_user
 from ..database import get_session
 from ..logging_config import get_correlation_id, get_logger, set_correlation_id
 from ..models.reminder import ReminderResponse
 from ..models.task import TaskCreate, TaskListResponse, TaskResponse, TaskUpdate
+from ..models.user import User
 from ..services.reminder_service import ReminderService
 from ..services.tag_service import TagService
 from ..services.task_service import TaskService
@@ -17,32 +18,6 @@ from ..services.task_service import TaskService
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
-
-
-def _get_user_id_from_request(request: Request) -> UUID:
-    """Extract user ID from request.
-
-    In production, this would extract from JWT token.
-    For now, using a mock user ID from header.
-
-    Args:
-        request: FastAPI request
-
-    Returns:
-        User ID
-
-    Raises:
-        HTTPException: If user ID not found
-    """
-    user_id = request.headers.get("X-User-ID")
-    if not user_id:
-        # Default user for development
-        user_id = "00000000-0000-0000-0000-000000000001"
-
-    try:
-        return UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid user ID format")
 
 
 def _get_correlation_id_from_request(request: Request) -> Optional[str]:
@@ -97,6 +72,7 @@ async def _get_tag_service(session: AsyncSession = Depends(get_session)) -> TagS
 async def create_task(
     task_data: TaskCreate,
     request: Request,
+    current_user: User = Depends(get_current_user),
     service: TaskService = Depends(_get_task_service),
     tag_service: TagService = Depends(_get_tag_service),
 ) -> TaskResponse:
@@ -105,6 +81,7 @@ async def create_task(
     Args:
         task_data: Task creation data including optional recurrence_pattern
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         service: Task service
 
     Returns:
@@ -127,7 +104,7 @@ async def create_task(
             }
         }
     """
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 
@@ -179,6 +156,7 @@ async def create_task(
 async def complete_task(
     task_id: int,
     request: Request,
+    current_user: User = Depends(get_current_user),
     service: TaskService = Depends(_get_task_service),
     tag_service: TagService = Depends(_get_tag_service),
 ) -> TaskResponse:
@@ -190,6 +168,7 @@ async def complete_task(
     Args:
         task_id: Task ID to complete
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         service: Task service
 
     Returns:
@@ -201,7 +180,7 @@ async def complete_task(
     Example:
         POST /tasks/123/complete
     """
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 
@@ -248,6 +227,7 @@ async def complete_task(
 @router.get("", response_model=TaskListResponse)
 async def list_tasks(
     request: Request,
+    current_user: User = Depends(get_current_user),
     search: Optional[str] = Query(None, description="Search term for full-text search across title and description"),
     status: Optional[str] = Query(None, description="Filter by status (todo, in_progress, completed)"),
     priority: Optional[str] = Query(None, description="Filter by priority (high, medium, low)"),
@@ -273,6 +253,7 @@ async def list_tasks(
 
     Args:
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         search: Optional search term
         status: Optional status filter
         priority: Optional priority filter
@@ -293,7 +274,7 @@ async def list_tasks(
     """
     from datetime import datetime
 
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 
@@ -380,6 +361,7 @@ async def list_tasks(
 async def get_task(
     task_id: int,
     request: Request,
+    current_user: User = Depends(get_current_user),
     service: TaskService = Depends(_get_task_service),
     tag_service: TagService = Depends(_get_tag_service),
 ) -> TaskResponse:
@@ -388,6 +370,7 @@ async def get_task(
     Args:
         task_id: Task ID to retrieve
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         service: Task service
 
     Returns:
@@ -399,7 +382,7 @@ async def get_task(
     Example:
         GET /tasks/123
     """
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 
@@ -440,6 +423,7 @@ async def update_task(
     task_id: int,
     task_data: TaskUpdate,
     request: Request,
+    current_user: User = Depends(get_current_user),
     service: TaskService = Depends(_get_task_service),
     tag_service: TagService = Depends(_get_tag_service),
 ) -> TaskResponse:
@@ -449,6 +433,7 @@ async def update_task(
         task_id: Task ID to update
         task_data: Task update data (all fields optional)
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         service: Task service
 
     Returns:
@@ -464,7 +449,7 @@ async def update_task(
             "priority": "high"
         }
     """
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 
@@ -513,6 +498,7 @@ async def update_task(
 async def stop_recurrence(
     task_id: int,
     request: Request,
+    current_user: User = Depends(get_current_user),
     service: TaskService = Depends(_get_task_service),
     tag_service: TagService = Depends(_get_tag_service),
 ) -> TaskResponse:
@@ -521,6 +507,7 @@ async def stop_recurrence(
     Args:
         task_id: Task ID to stop recurrence for
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         service: Task service
 
     Returns:
@@ -532,7 +519,7 @@ async def stop_recurrence(
     Example:
         POST /tasks/123/stop-recurrence
     """
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 
@@ -580,6 +567,7 @@ async def stop_recurrence(
 async def get_task_reminders(
     task_id: int,
     request: Request,
+    current_user: User = Depends(get_current_user),
     service: ReminderService = Depends(_get_reminder_service),
 ) -> list[ReminderResponse]:
     """Get all reminders for a task.
@@ -587,6 +575,7 @@ async def get_task_reminders(
     Args:
         task_id: Task ID to get reminders for
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         service: Reminder service
 
     Returns:
@@ -598,7 +587,7 @@ async def get_task_reminders(
     Example:
         GET /tasks/123/reminders
     """
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 

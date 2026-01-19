@@ -1,0 +1,21 @@
+apiVersion: v2
+name: todo-app
+description: Event-Driven Todo Application with Microservices, Kafka, and Dapr
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+keywords:
+  - todo
+  - microservices
+  - event-driven
+  - dapr
+  - kafka
+  - kubernetes
+maintainers:
+  - name: Todo App Team
+sources:
+  - https://github.com/your-org/todo-app
+dependencies: []
+annotations:
+  dapr.io/enabled: "true"
+  dapr.io/app-protocol: "http"

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-app.fullname" . }}-chat-api
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: chat-api
+spec:
+  type: {{ .Values.services.chatApi.type }}
+  ports:
+  - port: {{ .Values.services.chatApi.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "todo-app.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: chat-api

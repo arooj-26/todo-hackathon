@@ -3,7 +3,6 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from uuid import UUID
 
 from sqlmodel import Field, SQLModel
 
@@ -29,7 +28,7 @@ class ReminderBase(SQLModel):
     """Base reminder fields."""
 
     task_id: int = Field(foreign_key="tasks.id")
-    user_id: UUID = Field(foreign_key="users.id")
+    user_id: int = Field(foreign_key="users.id")  # Changed from UUID to int to match Phase-4 User model
     remind_at: datetime = Field(description="When to send the reminder (UTC)")
     notification_channel: NotificationChannel = Field(
         default=NotificationChannel.IN_APP, description="Delivery channel"

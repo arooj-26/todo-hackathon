@@ -69,6 +69,42 @@
   .dark .card {
     @apply bg-gray-800 border-gray-700;
   }
+
+  /* TodoFlow Theme - Dark Purple/Pink Gradient Components */
+  .glass-dark {
+    background: rgba(17, 24, 39, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .card-dark {
+    background: rgba(26, 31, 46, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+  }
+
+  .card-dark:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-gradient-pink {
+    background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 20px -2px rgba(236, 72, 153, 0.5);
+    transition: all 0.3s ease;
+  }
+
+  .btn-gradient-pink:hover {
+    box-shadow: 0 6px 30px -2px rgba(236, 72, 153, 0.7);
+    transform: translateY(-2px);
+  }
+
+  .btn-gradient-pink:active {
+    transform: translateY(0);
+  }
 }
 
 /**

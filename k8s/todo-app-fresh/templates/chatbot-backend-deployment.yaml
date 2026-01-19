@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbot-backend
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app: chatbot-backend
+spec:
+  replicas: {{ .Values.replicas.chatbotBackend }}
+  selector:
+    matchLabels:
+      app: chatbot-backend
+  template:
+    metadata:
+      labels:
+        app: chatbot-backend
+        {{- include "todo-app.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: chatbot-backend
+          image: "{{ .Values.images.chatbotBackend.repository }}:{{ .Values.images.chatbotBackend.tag }}"
+          imagePullPolicy: {{ .Values.images.chatbotBackend.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8001
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:$(POSTGRES_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_PASSWORD
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: OPENAI_API_KEY
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: SECRET_KEY
+            - name: TODO_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: TODO_API_URL
+          envFrom:
+            - configMapRef:
+                name: app-config
+          resources:
+            requests:
+              cpu: {{ .Values.resources.chatbotBackend.requests.cpu }}
+              memory: {{ .Values.resources.chatbotBackend.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.chatbotBackend.limits.cpu }}
+              memory: {{ .Values.resources.chatbotBackend.limits.memory }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3

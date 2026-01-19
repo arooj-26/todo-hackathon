@@ -1,0 +1,23 @@
+{{- if .Values.dapr.enabled }}
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: kafka-pubsub
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    value: {{ .Values.config.kafkaBrokers | quote }}
+  - name: authType
+    value: "none"
+  - name: consumerGroup
+    value: "todo-app-group"
+  - name: clientID
+    value: "todo-app"
+  - name: maxMessageBytes
+    value: "1048576"  # 1MB
+  - name: version
+    value: "2.8.0"
+{{- end }}

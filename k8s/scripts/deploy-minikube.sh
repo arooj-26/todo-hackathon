@@ -1,4 +1,5 @@
-#!/bin/bash
+
+ #!/bin/bash
 # Minikube deployment script for Todo App with microservices architecture
 # This script deploys the complete system to a local Minikube cluster
 

@@ -23,9 +23,17 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application code
 COPY . .
 
+# Build args for Next.js public environment variables
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ARG NEXT_PUBLIC_CHATBOT_API_URL=http://localhost:8001
+ARG NEXT_PUBLIC_PHASE4_AUTH_URL=http://localhost:8000
+
 # Set environment for build
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_CHATBOT_API_URL=$NEXT_PUBLIC_CHATBOT_API_URL
+ENV NEXT_PUBLIC_PHASE4_AUTH_URL=$NEXT_PUBLIC_PHASE4_AUTH_URL
 
 # Build application
 RUN npm run build
@@ -35,8 +43,8 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
@@ -52,8 +60,8 @@ USER nextjs
 # Expose port
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \

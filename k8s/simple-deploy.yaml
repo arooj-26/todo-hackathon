@@ -1,0 +1,266 @@
+---
+# PostgreSQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: todo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: database
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: todo-app
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: todo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: phase-5-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          value: "http://192.168.49.2:32162"
+        - name: NEXT_PUBLIC_CHATBOT_API_URL
+          value: "http://192.168.49.2:31321"
+---
+# Frontend Service (NodePort for external access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: todo-app
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30000
+---
+# Chat API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-api
+  namespace: todo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-api
+  template:
+    metadata:
+      labels:
+        app: chat-api
+    spec:
+      containers:
+      - name: chat-api
+        image: phase-5-chat-api:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: async-connection-string
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: secret
+        - name: CORS_ORIGINS
+          value: "http://192.168.49.2:30000,http://localhost:3000"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: DAPR_HTTP_PORT
+          value: "3500"
+        - name: DAPR_GRPC_PORT
+          value: "50001"
+        - name: PHASE4_AUTH_URL
+          value: "http://todo-app-backend:8000"
+---
+# Chat API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-api
+  namespace: todo-app
+spec:
+  selector:
+    app: chat-api
+  ports:
+  - port: 8000
+    targetPort: 8000
+---
+# Recurring Tasks Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recurring-tasks
+  namespace: todo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recurring-tasks
+  template:
+    metadata:
+      labels:
+        app: recurring-tasks
+    spec:
+      containers:
+      - name: recurring-tasks
+        image: phase-5-recurring-tasks:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+---
+# Recurring Tasks Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: recurring-tasks
+  namespace: todo-app
+spec:
+  selector:
+    app: recurring-tasks
+  ports:
+  - port: 8001
+    targetPort: 8001
+---
+# Notifications Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications
+  namespace: todo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notifications
+  template:
+    metadata:
+      labels:
+        app: notifications
+    spec:
+      containers:
+      - name: notifications
+        image: phase-5-notifications:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8002
+---
+# Notifications Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications
+  namespace: todo-app
+spec:
+  selector:
+    app: notifications
+  ports:
+  - port: 8002
+    targetPort: 8002
+---
+# Audit Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit
+  namespace: todo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: audit
+  template:
+    metadata:
+      labels:
+        app: audit
+    spec:
+      containers:
+      - name: audit
+        image: phase-5-audit:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8003
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: connection-string
+---
+# Audit Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit
+  namespace: todo-app
+spec:
+  selector:
+    app: audit
+  ports:
+  - port: 8003
+    targetPort: 8003

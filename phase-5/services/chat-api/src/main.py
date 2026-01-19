@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .api.auth import router as auth_router
 from .api.health import router as health_router
 from .api.tags import router as tags_router
 from .api.tasks import router as tasks_router
@@ -13,6 +14,7 @@ from .dapr.pubsub import dapr_pubsub, DaprPubSubClient
 from .database import db_manager, DatabaseManager
 from .logging_config import configure_logging, get_logger
 from .middleware.error_handler import add_error_handler_middleware
+from .middleware.metrics import PrometheusMiddleware, get_metrics_response
 
 # Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO")
@@ -53,18 +55,30 @@ app = FastAPI(
 )
 
 # Add CORS middleware
+# Configure CORS origins from environment variable
+# In production, set CORS_ORIGINS to comma-separated whitelist
+cors_origins_str = os.getenv("CORS_ORIGINS", "*")
+cors_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+
+if "*" in cors_origins:
+    logger.warning("CORS is configured to allow all origins (*). Set CORS_ORIGINS env var in production!")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],
 )
+
+# Add Prometheus metrics middleware
+app.add_middleware(PrometheusMiddleware)
 
 # Add error handler middleware
 add_error_handler_middleware(app)
 
 # Include routers
+app.include_router(auth_router)
 app.include_router(health_router)
 app.include_router(tags_router)
 app.include_router(tasks_router)
@@ -78,6 +92,23 @@ async def root():
         "version": "1.0.0",
         "status": "running",
     }
+
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint.
+
+    Exposes metrics for:
+    - HTTP request rate, latency (p50, p95, p99), error rate
+    - Tasks created/completed/deleted counts
+    - Events published/failed counts
+    - Database query duration
+    - Active users gauge
+
+    Returns:
+        Prometheus-formatted metrics
+    """
+    return get_metrics_response()
 
 
 if __name__ == "__main__":

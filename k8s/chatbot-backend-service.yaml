@@ -1,0 +1,19 @@
+---
+# Chatbot Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatbot-backend
+  namespace: todo-app
+  labels:
+    app: chatbot-backend
+spec:
+  type: NodePort
+  selector:
+    app: chatbot-backend
+  ports:
+  - port: 8001
+    targetPort: 8001
+    nodePort: 31851
+    protocol: TCP
+    name: http

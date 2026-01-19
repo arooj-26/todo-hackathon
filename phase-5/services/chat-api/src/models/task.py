@@ -3,7 +3,6 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from uuid import UUID
 
 from sqlmodel import Field, SQLModel
 
@@ -35,12 +34,15 @@ class TaskBase(SQLModel):
 
 
 class Task(TaskBase, table=True):
-    """Task entity with full-text search and recurrence support."""
+    """Task entity with full-text search and recurrence support.
+
+    Note: Uses integer user_id to match Phase-4 auth backend.
+    """
 
     __tablename__ = "tasks"
 
     id: int = Field(default=None, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id")
+    user_id: int = Field(foreign_key="users.id")  # Changed from UUID to int to match Phase-4
     completed_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -90,7 +92,7 @@ class TaskResponse(TaskBase):
     """Task response schema."""
 
     id: int
-    user_id: UUID
+    user_id: int  # Changed from UUID to int to match Phase-4
     completed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

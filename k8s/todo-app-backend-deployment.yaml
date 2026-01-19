@@ -1,0 +1,52 @@
+---
+# Todo App Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-app-backend
+  namespace: todo-app
+  labels:
+    app: todo-app-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-app-backend
+  template:
+    metadata:
+      labels:
+        app: todo-app-backend
+    spec:
+      containers:
+      - name: todo-app-backend
+        image: todo-app-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://postgres:postgres@postgres:5432/todo_chatbot"
+        - name: SECRET_KEY
+          value: "your-secret-key-replace-in-production"
+        - name: ALGORITHM
+          value: "HS256"
+        - name: ACCESS_TOKEN_EXPIRE_HOURS
+          value: "24"
+        - name: ENVIRONMENT
+          value: "development"
+---
+# Todo App Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-app-backend
+  namespace: todo-app
+spec:
+  type: NodePort
+  selector:
+    app: todo-app-backend
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 31850

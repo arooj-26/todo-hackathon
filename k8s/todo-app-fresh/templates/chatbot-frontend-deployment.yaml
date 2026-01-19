@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbot-frontend
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+    app: chatbot-frontend
+spec:
+  replicas: {{ .Values.replicas.chatbotFrontend }}
+  selector:
+    matchLabels:
+      app: chatbot-frontend
+  template:
+    metadata:
+      labels:
+        app: chatbot-frontend
+        {{- include "todo-app.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: chatbot-frontend
+          image: "{{ .Values.images.chatbotFrontend.repository }}:{{ .Values.images.chatbotFrontend.tag }}"
+          imagePullPolicy: {{ .Values.images.chatbotFrontend.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3001
+              protocol: TCP
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: CHATBOT_API_URL
+          resources:
+            requests:
+              cpu: {{ .Values.resources.chatbotFrontend.requests.cpu }}
+              memory: {{ .Values.resources.chatbotFrontend.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.chatbotFrontend.limits.cpu }}
+              memory: {{ .Values.resources.chatbotFrontend.limits.memory }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3

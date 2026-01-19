@@ -1,0 +1,48 @@
+---
+# Chatbot Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbot-backend
+  namespace: todo-app
+  labels:
+    app: chatbot-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chatbot-backend
+  template:
+    metadata:
+      labels:
+        app: chatbot-backend
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "chatbot-backend"
+        dapr.io/app-port: "8001"
+        dapr.io/config: "dapr-config"
+        dapr.io/enable-metrics: "true"
+        dapr.io/log-level: "info"
+    spec:
+      containers:
+      - name: chatbot-backend
+        image: chatbot-backend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+          name: http
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://postgres:postgres@postgres:5432/todo_chatbot"
+        - name: OPENAI_API_KEY
+          value: "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"
+        - name: SECRET_KEY
+          value: "your-secret-key-replace-in-production"
+        - name: ALGORITHM
+          value: "HS256"
+        - name: ENVIRONMENT
+          value: "development"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: FRONTEND_URL
+          value: "http://frontend:3000"

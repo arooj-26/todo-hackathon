@@ -5,11 +5,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth.middleware import get_current_user
 from ..database import get_session
 from ..logging_config import get_correlation_id, get_logger, set_correlation_id
 from ..models.tag import TagCreate, TagListResponse, TagResponse
+from ..models.user import User
 from ..services.tag_service import TagService
-from .tasks import _get_correlation_id_from_request, _get_user_id_from_request
+from .tasks import _get_correlation_id_from_request
 
 logger = get_logger(__name__)
 
@@ -32,6 +34,7 @@ async def _get_tag_service(session: AsyncSession = Depends(get_session)) -> TagS
 async def create_tag(
     tag_data: TagCreate,
     request: Request,
+    current_user: User = Depends(get_current_user),
     service: TagService = Depends(_get_tag_service),
 ) -> TagResponse:
     """Create a new tag.
@@ -41,6 +44,7 @@ async def create_tag(
     Args:
         tag_data: Tag creation data
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         service: Tag service
 
     Returns:
@@ -55,7 +59,7 @@ async def create_tag(
             "name": "backend"
         }
     """
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 
@@ -88,6 +92,7 @@ async def create_tag(
 @router.get("", response_model=TagListResponse)
 async def list_tags(
     request: Request,
+    current_user: User = Depends(get_current_user),
     search: Optional[str] = Query(
         None,
         description="Search string for autocomplete (matches tags containing this string)",
@@ -102,6 +107,7 @@ async def list_tags(
 
     Args:
         request: FastAPI request
+        current_user: Authenticated user from JWT token
         search: Optional search string for filtering tags
         limit: Maximum tags to return (1-100)
         service: Tag service
@@ -115,7 +121,7 @@ async def list_tags(
         Returns tags containing "back" (e.g., "backend", "feedback")
         ordered by most frequently used first.
     """
-    user_id = _get_user_id_from_request(request)
+    user_id = current_user.id
     correlation_id = _get_correlation_id_from_request(request)
     set_correlation_id(correlation_id)
 

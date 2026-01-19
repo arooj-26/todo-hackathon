@@ -1,0 +1,48 @@
+---
+# Todo App Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-app-frontend
+  namespace: todo-app
+  labels:
+    app: todo-app-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-app-frontend
+  template:
+    metadata:
+      labels:
+        app: todo-app-frontend
+    spec:
+      containers:
+      - name: todo-app-frontend
+        image: todo-app-frontend:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          value: "http://localhost:31850"
+        - name: PORT
+          value: "3000"
+        - name: NODE_ENV
+          value: "production"
+---
+# Todo App Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-app-frontend
+  namespace: todo-app
+spec:
+  type: NodePort
+  selector:
+    app: todo-app-frontend
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30002

@@ -167,6 +167,9 @@ async def signin(
             token_type="bearer",
             user=UserResponse.model_validate(user)
         )
+    except HTTPException:
+        # Re-raise HTTPException as-is (don't convert to 500)
+        raise
     except SQLAlchemyError as e:
         logger.error(f"Database error during signin for {credentials.email}: {e}", exc_info=True)
         raise HTTPException(
