@@ -56,6 +56,8 @@ async def signup(
         session.refresh(new_user)
         logger.info(f"Successfully created new user: {new_user.email} (ID: {new_user.id})")
 
+    except HTTPException:
+        raise
     except IntegrityError as e:
         logger.warning(f"Integrity error during user creation: {e}")
         session.rollback()
