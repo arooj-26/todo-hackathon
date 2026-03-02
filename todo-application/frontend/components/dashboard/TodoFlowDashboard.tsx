@@ -64,6 +64,11 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
     return () => clearInterval(intervalId)
   }, [user])
 
+  useEffect(() => {
+    document.body.style.overflow = isSidebarOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [isSidebarOpen])
+
   const loadTasks = async () => {
     try {
       setIsLoading(true)
@@ -285,23 +290,34 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
       {/* MOBILE SIDEBAR OVERLAY */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+          <motion.div
+            key="mobile-sidebar-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 lg:hidden"
+          >
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/50"
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 bg-black/40 z-40 lg:hidden"
             />
+            {/* Sidebar Panel */}
             <motion.aside
-              initial={{ x: -288 }}
+              initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: -288 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 bottom-0 w-72 bg-white z-50 flex flex-col shadow-2xl lg:hidden overflow-y-auto"
+              exit={{ x: '-100%' }}
+              transition={{ type: 'tween', duration: 0.25, ease: 'easeInOut' }}
+              className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-white flex flex-col shadow-2xl overflow-y-auto"
             >
               <div className="flex items-center justify-between p-4 border-b border-purple-100/50">
-                <span className="font-bold text-gray-800">Menu</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
+                    <CheckSquare className="w-4 h-4 text-white" strokeWidth={2.5} />
+                  </div>
+                  <span className="font-bold text-gray-800">TodoFlow</span>
+                </div>
                 <button
                   onClick={() => setIsSidebarOpen(false)}
                   className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -311,7 +327,7 @@ export default function TodoFlowDashboard({ user, onSignOut }: TodoFlowDashboard
               </div>
               <SidebarContent onNavClick={() => setIsSidebarOpen(false)} />
             </motion.aside>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
 
