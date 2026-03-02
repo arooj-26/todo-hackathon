@@ -4,9 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 from app.config import settings
 from app.routers import auth, tasks
 import logging
+import asyncio
 
 # Create FastAPI application
 app = FastAPI(
@@ -69,6 +71,25 @@ async def general_exception_handler(request: Request, exc: Exception):
             "traceback": error_traceback if settings.ENVIRONMENT == "development" else None
         }
     )
+
+
+async def _keep_db_alive():
+    """Ping Neon every 4 min so it never suspends (free tier suspends after 5 min idle)."""
+    from app.database import engine
+    while True:
+        await asyncio.sleep(240)  # 4 minutes
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.debug("DB keep-alive ping OK")
+        except Exception as e:
+            logger.warning(f"DB keep-alive ping failed: {e}")
+
+
+@app.on_event("startup")
+async def startup():
+    asyncio.create_task(_keep_db_alive())
+    logger.info("DB keep-alive task started")
 
 
 @app.get("/")
