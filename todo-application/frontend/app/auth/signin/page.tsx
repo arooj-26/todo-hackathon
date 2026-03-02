@@ -3,7 +3,7 @@
  */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -19,6 +19,11 @@ export default function SignInPage() {
 
   const { signIn } = useAuthContext()
   const router = useRouter()
+
+  // Wake up backend + Neon DB as soon as page loads
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/health`, { method: 'GET' }).catch(() => {})
+  }, [])
 
   const validateEmail = (email: string): string | undefined => {
     if (!email) return 'Email is required'

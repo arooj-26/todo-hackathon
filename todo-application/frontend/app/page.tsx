@@ -4,7 +4,7 @@
  */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -13,6 +13,12 @@ import {
 } from 'lucide-react'
 
 export default function LandingPage() {
+  // Silently ping the backend on page load so Neon DB wakes up
+  // before the user reaches the sign-in page
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/health`, { method: 'GET' }).catch(() => {})
+  }, [])
+
   const features = [
     {
       title: 'AI-Powered Chatbot',
