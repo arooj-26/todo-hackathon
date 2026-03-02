@@ -15,9 +15,14 @@
  * Get the backend API URL based on the current environment
  */
 export function getApiBaseUrl(): string {
-  // Server-side rendering - use env var or default
+  // Use env var if explicitly set (works both server-side and client-side in Next.js)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL
+  }
+
+  // Server-side rendering fallback
   if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    return 'http://localhost:8000'
   }
 
   // Check for manually configured URL in localStorage (for Windows/special setups)
@@ -55,9 +60,14 @@ export function getApiBaseUrl(): string {
  * Chatbot backend runs on port 8001 (NodePort 31851)
  */
 export function getChatbotApiUrl(): string {
-  // Server-side rendering - use env var or default
+  // Use env var if explicitly set (works both server-side and client-side in Next.js)
+  if (process.env.NEXT_PUBLIC_CHATBOT_API_URL) {
+    return process.env.NEXT_PUBLIC_CHATBOT_API_URL
+  }
+
+  // Server-side rendering fallback
   if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'http://localhost:8001'
+    return 'http://localhost:8001'
   }
 
   // Check for manually configured URL in localStorage
