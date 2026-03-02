@@ -12,7 +12,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds (increased for Neon database latency)
+  timeout: 60000, // 60 seconds (Neon DB cold start can take up to 30s)
 })
 
 // Set baseURL dynamically on each request for runtime detection

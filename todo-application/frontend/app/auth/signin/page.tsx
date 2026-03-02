@@ -53,7 +53,12 @@ export default function SignInPage() {
     try {
       await signIn(email, password)
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in')
+      const msg = err.message || ''
+      if (msg.includes('timeout') || msg.includes('Network Error') || msg.includes('ECONNREFUSED')) {
+        setError('Server is starting up, please try again in a few seconds.')
+      } else {
+        setError(err.message || 'Failed to sign in')
+      }
       setIsLoading(false)
     }
   }

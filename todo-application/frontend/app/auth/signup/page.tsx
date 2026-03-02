@@ -57,7 +57,12 @@ export default function SignUpPage() {
     try {
       await signUp(email, password)
     } catch (err: any) {
-      setError(err.message || 'Failed to create account')
+      const msg = err.message || ''
+      if (msg.includes('timeout') || msg.includes('Network Error') || msg.includes('ECONNREFUSED')) {
+        setError('Server is starting up, please try again in a few seconds.')
+      } else {
+        setError(err.message || 'Failed to create account')
+      }
       setIsLoading(false)
     }
   }
